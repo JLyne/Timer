@@ -182,7 +182,7 @@ public class BossBarHandler implements TimerHandler, Listener {
      * @param remaining The remaining seconds.
      * @param total The total seconds.
      */
-    public void updateProgress(int remaining, int total) {
+    public void updateProgress(long remaining, long total) {
         try {
             setProgress.invoke(bossBar, ((double) remaining) / ((double) total));
         } catch (IllegalAccessException | InvocationTargetException ex) {

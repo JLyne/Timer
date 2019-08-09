@@ -35,6 +35,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.lang.reflect.InvocationTargetException;
+import java.time.Instant;
 
 /**
  * Timer runnable class.
@@ -61,6 +62,7 @@ public class TimerRunnable implements Runnable {
 
     private int remaining = 0;
     private int total = 0;
+    private long endTime = 0;
 
     @Override
     public void run() {
@@ -68,17 +70,16 @@ public class TimerRunnable implements Runnable {
             ((BossBarHandler) handler).updateProgress(remaining, total);
         }
 
-        if (remaining % 20 == 0) {
-            handler.sendText(message + (countdown ? " " + timeToString(remaining / 20) : ""));
+        int newRemaining = (int) Math.floor((endTime - System.currentTimeMillis()) / 1000);
+
+        if (countdown && newRemaining <= 0) {
+            cancel();
+            return;
         }
 
-        if (countdown) {
-            if (remaining == 0) {
-                cancel();
-                return;
-            }
-
-            remaining--;
+        if (remaining != newRemaining) {
+            handler.sendText(message + (countdown ? " " + timeToString(newRemaining) : ""));
+            remaining = newRemaining;
         }
     }
 
@@ -92,13 +93,14 @@ public class TimerRunnable implements Runnable {
      * @param seconds the amount of seconds to send the message for
      */
     public void startSendingMessage(String message, int seconds) {
-        this.remaining = (seconds * 20);
-        this.total = (seconds * 20);
+        this.remaining = seconds;
+        this.total = seconds;
+        this.endTime = System.currentTimeMillis() + (seconds * 1000);
 
         this.countdown = seconds > -1;
         this.message = message;
 
-        handler.startTimer(message + (countdown ? " " + timeToString(remaining / 20) : ""));
+        handler.startTimer(message + (countdown ? " " + timeToString(remaining) : ""));
 
         cancel();
         jobId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this, 0, 1L);
@@ -143,17 +145,15 @@ public class TimerRunnable implements Runnable {
     /**
      * Converts the seconds into a string with hours, minutes and seconds.
      *
-     * @param ticks the number of seconds.
+     * @param seconds the number of seconds.
      * @return The converted seconds.
      */
-    private String timeToString(long ticks) {
-        int hours = (int) Math.floor(ticks / (double) SECONDS_PER_HOUR);
-        ticks -= hours * SECONDS_PER_HOUR;
+    private String timeToString(long seconds) {
+        int hours = (int) Math.floor(seconds / (double) SECONDS_PER_HOUR);
+        seconds -= hours * SECONDS_PER_HOUR;
 
-        int minutes = (int) Math.floor(ticks / (double) SECONDS_PER_MINUTE);
-        ticks -= minutes * SECONDS_PER_MINUTE;
-
-        int seconds = (int) ticks;
+        int minutes = (int) Math.floor(seconds / (double) SECONDS_PER_MINUTE);
+        seconds -= minutes * SECONDS_PER_MINUTE;
 
         StringBuilder output = new StringBuilder();
 
