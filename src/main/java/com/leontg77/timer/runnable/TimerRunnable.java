@@ -67,7 +67,11 @@ public class TimerRunnable implements Runnable {
     @Override
     public void run() {
         if (handler instanceof BossBarHandler) {
-            ((BossBarHandler) handler).updateProgress(remaining, total);
+            if(countdown) {
+                ((BossBarHandler) handler).updateProgress(remaining, total);
+            } else {
+                ((BossBarHandler) handler).updateProgress(1, 1);
+            }
         }
 
         int newRemaining = (int) Math.floor((endTime - System.currentTimeMillis()) / 1000);
