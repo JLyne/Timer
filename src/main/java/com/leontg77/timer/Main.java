@@ -29,16 +29,11 @@ package com.leontg77.timer;
 
 import com.leontg77.timer.commands.TimerCommand;
 import com.leontg77.timer.handling.handlers.BossBarHandler;
-import com.leontg77.timer.handling.handlers.NewActionBarHandler;
-import com.leontg77.timer.handling.handlers.OldActionBarHandler;
 import com.leontg77.timer.runnable.TimerRunnable;
-import com.leontg77.timer.handling.PacketSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.logging.Level;
 
 /**
  * Main class of the plugin.
@@ -70,7 +65,6 @@ public class Main extends JavaPlugin {
         super.reloadConfig();
 
         if (getConfig().getConfigurationSection("bossbar") == null) {
-            getConfig().set("bossbar.enabled", true);
             getConfig().set("bossbar.color", "pink");
             getConfig().set("bossbar.style", "solid");
             saveConfig();
@@ -80,27 +74,9 @@ public class Main extends JavaPlugin {
             HandlerList.unregisterAll((Listener) runnable.getHandler());
         }
 
-        try {
-            PacketSender packetSender = new PacketSender();
-            FileConfiguration config = getConfig();
-
-            if (config.getBoolean("bossbar.enabled")) {
-                try {
-                    runnable = new TimerRunnable(this, new BossBarHandler(this, config.getString("bossbar.color", "pink"), config.getString("bossbar.style", "solid")));
-                    return;
-                } catch (Exception ignored) {}
-
-                getLogger().warning("BossBars are not supported in pre Minecraft 1.9, defaulting to action bar.");
-            }
-    
-            try {
-                runnable = new TimerRunnable(this, new NewActionBarHandler(packetSender));
-            } catch (Exception ex) {
-                runnable = new TimerRunnable(this, new OldActionBarHandler(packetSender));
-            }
-        } catch (Exception ex) {
-            getLogger().log(Level.SEVERE, "Failed to setup action timer plugin, are you using Minecraft 1.8 or higher?", ex);
-            setEnabled(false);
-        }
+        FileConfiguration config = getConfig();
+        runnable = new TimerRunnable(this, new BossBarHandler(this,
+                                                              config.getString("bossbar.color", "pink"),
+                                                              config.getString("bossbar.style", "solid")));
     }
 }

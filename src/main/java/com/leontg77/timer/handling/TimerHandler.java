@@ -33,8 +33,6 @@ package com.leontg77.timer.handling;
  * @author LeonTG
  */
 public interface TimerHandler {
-    byte ACTION_BAR_TYPE = 2;
-
     /**
      * Start the timer handler.
      *

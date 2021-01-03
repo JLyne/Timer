@@ -34,9 +34,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitScheduler;
 
-import java.lang.reflect.InvocationTargetException;
-import java.time.Instant;
-
 /**
  * Timer runnable class.
  *

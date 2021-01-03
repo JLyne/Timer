@@ -32,9 +32,10 @@ import com.google.common.collect.Lists;
 import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
 import com.leontg77.timer.handling.handlers.BossBarHandler;
-import com.leontg77.timer.runnable.TimerRunnable;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -42,10 +43,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.util.StringUtil;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 /**
@@ -62,23 +61,19 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
     public TimerCommand(Main plugin) {
         this.plugin = plugin;
 
-        try {
-            for (Object enumz : Class.forName("org.bukkit.boss.BarColor").getEnumConstants()) {
-                colors.add(enumz.toString().toLowerCase());
-            }
+        for (BarColor value : BarColor.values()) {
+            colors.add(value.toString().toLowerCase());
+        }
 
-            for (Object enumz : Class.forName("org.bukkit.boss.BarStyle").getEnumConstants()) {
-                styles.add(enumz.toString().toLowerCase());
-            }
-        } catch (ClassNotFoundException ex) {
-            plugin.getLogger().log(Level.WARNING, "Unable to find tab completable colors and styles for boss bars.", ex);
+        for (BarStyle value : BarStyle.values()) {
+            styles.add(value.toString().toLowerCase());
         }
     }
 
     private static final String PERMISSION = "timer.manage";
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label,String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!sender.hasPermission(PERMISSION)) {
             sender.sendMessage(ChatColor.RED + "You can't use that command.");
             return true;
@@ -135,18 +130,14 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
                 style = args[2];
             }
 
-            try {
-                bossBar.update(color.toUpperCase(), style.toUpperCase());
+            bossBar.update(color.toUpperCase(), style.toUpperCase());
 
-                plugin.getConfig().set("bossbar.color", color);
-                plugin.getConfig().set("bossbar.style", style);
-                plugin.saveConfig();
+            plugin.getConfig().set("bossbar.color", color);
+            plugin.getConfig().set("bossbar.style", style);
+            plugin.saveConfig();
 
-                sender.sendMessage(Main.PREFIX + "Boss bar settings have been updated.");
-            } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException ex) {
-                sender.sendMessage(ChatColor.RED + "The color or style you entered is invalid, use tab-complete!");
-                return true;
-            }
+            sender.sendMessage(Main.PREFIX + "Boss bar settings have been updated.");
+
             return true;
         }
 
@@ -164,7 +155,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
 
         try {
             seconds = Integer.parseInt(args[0]);
-        } catch (Exception ex) {
+        } catch (NumberFormatException ex) {
             sender.sendMessage(ChatColor.RED + "'" + args[0] + "' is not a valid time.");
             return true;
         }

@@ -2,8 +2,8 @@ name: ${project.name}
 main: ${project.groupId}.${project.artifactId}.Main
 version: ${project.version}
 author: LeonTG
-description: This plugin adds a timer that will countdown in the action/boss bar of players.
-api-version: '1.16'
+description: This plugin adds a timer that will countdown in the boss bar of players.
+api-version: '1.15'
 
 commands:
   timer:
