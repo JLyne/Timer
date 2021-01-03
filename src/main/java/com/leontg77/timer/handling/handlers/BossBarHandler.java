@@ -48,8 +48,8 @@ public class BossBarHandler implements TimerHandler, Listener {
 
     public BossBarHandler(Main plugin, String color, String style) {
         this.plugin = plugin;
-        this.color = BarColor.valueOf(color);
-        this.style = BarStyle.valueOf(style);
+        this.color = BarColor.valueOf(color.toUpperCase());
+        this.style = BarStyle.valueOf(style.toUpperCase());
     }
 
     private BossBar bossBar = null;
