@@ -34,10 +34,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitScheduler;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+
 /**
  * Timer runnable class.
  *
- * @author LeonTG & ghowden
+ * @author LeonTG & ghowdenb
  */
 public class TimerRunnable implements Runnable {
     private final TimerHandler handler;
@@ -57,9 +61,9 @@ public class TimerRunnable implements Runnable {
 
     private String message;
 
-    private int remaining = 0;
-    private int total = 0;
-    private long endTime = 0;
+    private long remaining = 0;
+    private long total = 0;
+    private Instant endTime = null;
 
     @Override
     public void run() {
@@ -71,9 +75,10 @@ public class TimerRunnable implements Runnable {
             }
         }
 
-        int newRemaining = (int) Math.floor((endTime - System.currentTimeMillis()) / 1000);
+        long newRemaining = Duration.between(Instant.now(), endTime).getSeconds();
 
-        if (countdown && newRemaining <= 0) {
+        if (countdown && newRemaining < 0) {
+            plugin.getLogger().info("Timer has ended for \"" + message + "\"");
             cancel();
             return;
         }
@@ -91,14 +96,15 @@ public class TimerRunnable implements Runnable {
      * Overwrites any previous settings
      *
      * @param message the message to send
-     * @param seconds the amount of seconds to send the message for
+     * @param endTime the instant the timer should end at
      */
-    public void startSendingMessage(String message, int seconds) {
-        this.remaining = seconds;
-        this.total = seconds;
-        this.endTime = System.currentTimeMillis() + (seconds * 1000);
+    public void startSendingMessage(String message, Instant endTime) {
+        Instant now = Instant.now();
+        this.remaining = Duration.between(now, endTime).getSeconds();
+        this.total = this.remaining;
+        this.endTime = endTime;
 
-        this.countdown = seconds > -1;
+        this.countdown = !endTime.isBefore(now);
         this.message = message;
 
         handler.startTimer(message + (countdown ? " " + timeToString(remaining) : ""));
@@ -140,6 +146,7 @@ public class TimerRunnable implements Runnable {
         return handler;
     }
 
+    private static final long SECONDS_PER_DAY = 86400;
     private static final long SECONDS_PER_HOUR = 3600;
     private static final long SECONDS_PER_MINUTE = 60;
 
@@ -150,27 +157,33 @@ public class TimerRunnable implements Runnable {
      * @return The converted seconds.
      */
     private String timeToString(long seconds) {
+        int days = (int) Math.floor(seconds / (double) SECONDS_PER_DAY);
+        seconds -= days * SECONDS_PER_DAY;
+
         int hours = (int) Math.floor(seconds / (double) SECONDS_PER_HOUR);
         seconds -= hours * SECONDS_PER_HOUR;
 
         int minutes = (int) Math.floor(seconds / (double) SECONDS_PER_MINUTE);
         seconds -= minutes * SECONDS_PER_MINUTE;
 
-        StringBuilder output = new StringBuilder();
+        ArrayList<String> parts = new ArrayList<>();
+
+        if (days > 0) {
+            parts.add(days + "d");
+        }
 
         if (hours > 0) {
-            output.append(hours).append('h');
-
-            if (minutes == 0) {
-                output.append(minutes).append('m');
-            }
+            parts.add(hours + "h");
         }
 
         if (minutes > 0) {
-            output.append(minutes).append('m');
+            parts.add(minutes + "m");
         }
 
-        output.append(seconds).append('s');
-        return output.toString();
+        if(seconds > 0 || parts.size() == 0) {
+            parts.add(seconds + "s");
+        }
+
+        return String.join(" ", parts);
     }
 }

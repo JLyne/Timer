@@ -43,6 +43,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.util.StringUtil;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -151,10 +152,10 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        int seconds;
+        Instant endTime;
 
         try {
-            seconds = Integer.parseInt(args[0]);
+            endTime = getEndTime(args[0]);
         } catch (NumberFormatException ex) {
             sender.sendMessage(ChatColor.RED + "'" + args[0] + "' is not a valid time.");
             return true;
@@ -163,9 +164,21 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
         String message = Joiner.on(' ').join(Arrays.copyOfRange(args, 1, args.length));
         message = ChatColor.translateAlternateColorCodes('&', message);
 
-        plugin.getRunnable().startSendingMessage(message, seconds);
+        plugin.getConfig().set("timer.last-end-time", endTime.getEpochSecond());
+        plugin.getConfig().set("timer.last-message", message);
+        plugin.saveConfig();
+
+        plugin.getRunnable().startSendingMessage(message, endTime);
+        plugin.getLogger().info("Starting timer for \"" + message + "\"");
         sender.sendMessage(Main.PREFIX + "The timer has been started.");
         return true;
+    }
+
+    private Instant getEndTime(String time) {
+        long timestamp = Long.parseLong(time),
+                now = Instant.now().getEpochSecond();
+
+        return timestamp < now ? Instant.now().plusSeconds(timestamp) : Instant.ofEpochSecond(timestamp);
     }
 
     @Override

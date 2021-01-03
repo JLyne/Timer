@@ -35,6 +35,8 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.time.Instant;
+
 /**
  * Main class of the plugin.
  * 
@@ -78,5 +80,19 @@ public class Main extends JavaPlugin {
         runnable = new TimerRunnable(this, new BossBarHandler(this,
                                                               config.getString("bossbar.color", "pink"),
                                                               config.getString("bossbar.style", "solid")));
+
+        if(config.getConfigurationSection("timer") != null) {
+            long endTimestamp = config.getLong("timer.last-end-time");
+            String message = config.getString("timer.last-message");
+
+            if(endTimestamp > 0 && message != null) {
+                Instant endTime = Instant.ofEpochSecond(endTimestamp);
+
+                if(endTime.isAfter(Instant.now())) {
+                    getLogger().info("Resuming saved timer \"" + message + "\"");
+                    getRunnable().startSendingMessage(message, endTime);
+                }
+            }
+        }
     }
 }
