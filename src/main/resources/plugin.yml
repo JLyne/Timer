@@ -1,9 +1,11 @@
 name: Timer
 main: com.leontg77.Main
-version: ${project.version}
-author: LeonTG
+version: @project.version@
+authors:
+  - Jim (NotKatuen)
+  - LeonTG
 description: This plugin adds a timer that will countdown in the boss bar of players.
-api-version: '1.15'
+api-version: '1.16'
 
 commands:
   timer:
