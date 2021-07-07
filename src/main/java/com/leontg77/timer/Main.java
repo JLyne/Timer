@@ -36,6 +36,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * Main class of the plugin.
@@ -48,7 +49,7 @@ public class Main extends JavaPlugin {
     @Override
     public void onEnable() {
         reloadConfig();
-        getCommand("timer").setExecutor(new TimerCommand(this));
+        Objects.requireNonNull(getCommand("timer")).setExecutor(new TimerCommand(this));
     }
 
     private TimerRunnable runnable = null;

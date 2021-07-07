@@ -42,6 +42,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.util.StringUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -74,7 +75,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
     private static final String PERMISSION = "timer.manage";
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
         if (!sender.hasPermission(PERMISSION)) {
             sender.sendMessage(ChatColor.RED + "You can't use that command.");
             return true;
@@ -112,12 +113,10 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("update")) {
             TimerHandler handler = plugin.getRunnable().getHandler();
 
-            if (!(handler instanceof BossBarHandler)) {
+            if (!(handler instanceof BossBarHandler bossBar)) {
                 sender.sendMessage(ChatColor.RED + "Boss bar timer is disabled, coloring and style doesn't work in the action bar.");
                 return true;
             }
-
-            BossBarHandler bossBar = (BossBarHandler) handler;
 
             if (args.length == 1) {
                 sender.sendMessage(Main.PREFIX + "Usage: §c/timer update <color> [style]");
@@ -182,7 +181,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
         if (!sender.hasPermission(PERMISSION)) {
             return null;
         }
