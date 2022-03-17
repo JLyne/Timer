@@ -1,5 +1,5 @@
 name: Timer
-main: com.leontg77.Main
+main: com.leontg77.timer.Main
 version: @project.version@
 authors:
   - Jim (NotKatuen)
