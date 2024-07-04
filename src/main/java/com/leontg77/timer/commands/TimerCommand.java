@@ -32,6 +32,8 @@ import com.google.common.collect.Lists;
 import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
 import com.leontg77.timer.handling.handlers.BossBarHandler;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.boss.BarColor;
@@ -77,7 +79,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
         if (!sender.hasPermission(PERMISSION)) {
-            sender.sendMessage(ChatColor.RED + "You can't use that command.");
+            sender.sendMessage(Component.text("You can't use that command.").color(NamedTextColor.RED));
             return true;
         }
 
@@ -88,7 +90,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
 
         if (args[0].equalsIgnoreCase("cancel")) {
             if (!plugin.getRunnable().isRunning()) {
-                sender.sendMessage(ChatColor.RED + "There are no timers running.");
+                sender.sendMessage(Component.text("There are no timers running.").color(NamedTextColor.RED));
                 return true;
             }
 
@@ -99,7 +101,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
 
         if (args[0].equalsIgnoreCase("reload")) {
             if (plugin.getRunnable().isRunning()) {
-                sender.sendMessage(ChatColor.RED + "Cancel the current timer before you can reloading.");
+                sender.sendMessage(Component.text("Cancel the current timer before you can reloading.").color(NamedTextColor.RED));
                 return true;
             }
 
@@ -114,7 +116,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
             TimerHandler handler = plugin.getRunnable().getHandler();
 
             if (!(handler instanceof BossBarHandler bossBar)) {
-                sender.sendMessage(ChatColor.RED + "Boss bar timer is disabled, coloring and style doesn't work in the action bar.");
+                sender.sendMessage(Component.text("Boss bar timer is disabled, coloring and style doesn't work in the action bar.").color(NamedTextColor.RED));
                 return true;
             }
 
@@ -147,7 +149,8 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
         }
 
         if (plugin.getRunnable().isRunning()) {
-            sender.sendMessage(ChatColor.RED + "The timer is already running, cancel with /timer cancel.");
+            sender.sendMessage(
+                    Component.text("The timer is already running, cancel with /timer cancel.").color(NamedTextColor.RED));
             return true;
         }
 
@@ -156,7 +159,7 @@ public class TimerCommand implements CommandExecutor, TabCompleter {
         try {
             endTime = getEndTime(args[0]);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "'" + args[0] + "' is not a valid time.");
+            sender.sendMessage(Component.text("'" + args[0] + "' is not a valid time.").color(NamedTextColor.RED));
             return true;
         }
 
