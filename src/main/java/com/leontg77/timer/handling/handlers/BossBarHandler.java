@@ -46,10 +46,10 @@ import org.bukkit.event.player.PlayerJoinEvent;
 public class BossBarHandler implements TimerHandler, Listener {
     private final Main plugin;
 
-    public BossBarHandler(Main plugin, String color, String style) {
+    public BossBarHandler(Main plugin, BarColor color, BarStyle style) {
         this.plugin = plugin;
-        this.color = BarColor.valueOf(color.toUpperCase());
-        this.style = BarStyle.valueOf(style.toUpperCase());
+        this.color = color;
+        this.style = style;
     }
 
     private BossBar bossBar = null;
@@ -85,9 +85,9 @@ public class BossBarHandler implements TimerHandler, Listener {
      * @param newColor The new color.
      * @param newStyle The new style.
      */
-    public void update(String newColor, String newStyle) {
-        this.color = BarColor.valueOf(newColor);
-        this.style = BarStyle.valueOf(newStyle);
+    public void update(BarColor newColor, BarStyle newStyle) {
+        this.color = newColor;
+        this.style = newStyle;
 
         if (bossBar == null) {
             return;

@@ -27,191 +27,135 @@
 
 package com.leontg77.timer.commands;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.leontg77.timer.Main;
-import com.leontg77.timer.handling.TimerHandler;
 import com.leontg77.timer.handling.handlers.BossBarHandler;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
-import org.bukkit.entity.Player;
-import org.bukkit.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
+import static io.papermc.paper.command.brigadier.Commands.argument;
+import static io.papermc.paper.command.brigadier.Commands.literal;
+import static io.papermc.paper.command.brigadier.argument.ArgumentTypes.component;
 
 /**
  * Timer command class.
  *
  * @author LeonTG
  */
-public class TimerCommand implements CommandExecutor, TabCompleter {
+@SuppressWarnings("UnstableApiUsage")
+public final class TimerCommand {
     private final Main plugin;
-
-    private final List<String> colors = Lists.newArrayList();
-    private final List<String> styles = Lists.newArrayList();
-
-    public TimerCommand(Main plugin) {
-        this.plugin = plugin;
-
-        for (BarColor value : BarColor.values()) {
-            colors.add(value.toString().toLowerCase());
-        }
-
-        for (BarStyle value : BarStyle.values()) {
-            styles.add(value.toString().toLowerCase());
-        }
-    }
-
     private static final String PERMISSION = "timer.manage";
 
-    @Override
-    public boolean onCommand(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
-        if (!sender.hasPermission(PERMISSION)) {
-            sender.sendMessage(Component.text("You can't use that command.").color(NamedTextColor.RED));
-            return true;
-        }
+    public TimerCommand(Main plugin, Commands commands) {
+        this.plugin = plugin;
 
-        if (args.length == 0) {
-            sender.sendMessage(Main.PREFIX + "Usage: §c/timer <seconds|-1> <message> §7| §c/timer cancel");
-            return true;
-        }
+		LiteralCommandNode<CommandSourceStack> timerCommand = literal("timer")
+                .requires(ctx -> ctx.getSender().hasPermission(PERMISSION))
+                .then(literal("start")
+                              .then(literal("duration").then(argument("duration", time(20))
+                                            .then(argument("text", greedyString())
+                              .then(literal("duration").then(argument("duration", integer(1))
+                                                          .executes(ctx -> onStart(ctx, true)))))
+                              .then(literal("endtime").then(argument("endtime", longArg())
+                                            .then(argument("text", component())
+                                                          .executes(ctx -> onStart(ctx, false))))))
+                .then(literal("setstyle")
+                              .then(argument("color", new BarColorArgumentType())
+                                            .then(argument("style", new BarStyleArgumentType())
+                                                          .executes(this::onSetStyle))))
+                .then(literal("cancel").executes(this::onCancel))
+                .then(literal("reload").executes(this::onReload))
+                .build();
 
-        if (args[0].equalsIgnoreCase("cancel")) {
-            if (!plugin.getRunnable().isRunning()) {
-                sender.sendMessage(Component.text("There are no timers running.").color(NamedTextColor.RED));
-                return true;
-            }
+        commands.register(timerCommand, "Manage the bossbar timer");
+    }
 
-            plugin.getRunnable().cancel();
-            sender.sendMessage(Main.PREFIX + "The timer has been cancelled.");
-            return true;
-        }
-
-        if (args[0].equalsIgnoreCase("reload")) {
-            if (plugin.getRunnable().isRunning()) {
-                sender.sendMessage(Component.text("Cancel the current timer before you can reloading.").color(NamedTextColor.RED));
-                return true;
-            }
-
-            plugin.getRunnable().cancel();
-            plugin.reloadConfig();
-
-            sender.sendMessage(Main.PREFIX + "Timer config has been reloaded.");
-            return true;
-        }
-
-        if (args[0].equalsIgnoreCase("update")) {
-            TimerHandler handler = plugin.getRunnable().getHandler();
-
-            if (!(handler instanceof BossBarHandler bossBar)) {
-                sender.sendMessage(Component.text("Boss bar timer is disabled, coloring and style doesn't work in the action bar.").color(NamedTextColor.RED));
-                return true;
-            }
-
-            if (args.length == 1) {
-                sender.sendMessage(Main.PREFIX + "Usage: §c/timer update <color> [style]");
-                return true;
-            }
-
-            String color = args[1];
-            String style = "solid";
-
-            if (args.length > 2) {
-                style = args[2];
-            }
-
-            bossBar.update(color.toUpperCase(), style.toUpperCase());
-
-            plugin.getConfig().set("bossbar.color", color);
-            plugin.getConfig().set("bossbar.style", style);
-            plugin.saveConfig();
-
-            sender.sendMessage(Main.PREFIX + "Boss bar settings have been updated.");
-
-            return true;
-        }
-
-        if (args.length < 2) {
-            sender.sendMessage(Main.PREFIX + "Usage: §c/timer <seconds|-1> <message> §7| §c/timer cancel");
-            return true;
-        }
+    private int onStart(CommandContext<CommandSourceStack> ctx, @NotNull TimerType type) {
+        CommandSender sender = ctx.getSource().getSender();
 
         if (plugin.getRunnable().isRunning()) {
-            sender.sendMessage(
-                    Component.text("The timer is already running, cancel with /timer cancel.").color(NamedTextColor.RED));
-            return true;
+            sender.sendMessage(Component.text("Timer is already running, cancel with /timer cancel.")
+                                       .color(NamedTextColor.RED));
+            return Command.SINGLE_SUCCESS;
         }
+
+        String text = ctx.getArgument("text", String.class);
 
         Instant endTime;
 
-        try {
-            endTime = getEndTime(args[0]);
-        } catch (NumberFormatException ex) {
-            sender.sendMessage(Component.text("'" + args[0] + "' is not a valid time.").color(NamedTextColor.RED));
-            return true;
+        if(isDuration) {
+            endTime = Instant.now().plusSeconds(ctx.getArgument("duration", int.class));
+        } else {
+            endTime = Instant.ofEpochSecond(ctx.getArgument("endtime", long.class));
         }
-
-        String message = Joiner.on(' ').join(Arrays.copyOfRange(args, 1, args.length));
-        message = ChatColor.translateAlternateColorCodes('&', message);
 
         plugin.getConfig().set("timer.last-end-time", endTime.getEpochSecond());
-        plugin.getConfig().set("timer.last-message", message);
+        plugin.getConfig().set("timer.last-message", text);
         plugin.saveConfig();
 
-        plugin.getRunnable().startSendingMessage(message, endTime);
-        plugin.getLogger().info("Starting timer for \"" + message + "\"");
-        sender.sendMessage(Main.PREFIX + "The timer has been started.");
-        return true;
+        plugin.getRunnable().startSendingMessage(text, endTime);
+        plugin.getLogger().info("Starting timer for \"" + text + "\"");
+        sender.sendMessage(Component.text("Timer started.").color(NamedTextColor.GREEN));
+
+        return Command.SINGLE_SUCCESS;
     }
 
-    private Instant getEndTime(String time) {
-        long timestamp = Long.parseLong(time),
-                now = Instant.now().getEpochSecond();
+    private int onSetStyle(CommandContext<CommandSourceStack> ctx) {
+        CommandSender sender = ctx.getSource().getSender();
+        BossBarHandler handler = (BossBarHandler) plugin.getRunnable().getHandler();
+        BarColor color = ctx.getArgument("color", BarColor.class);
+        BarStyle style = ctx.getArgument("style", BarStyle.class);
 
-        return timestamp < now ? Instant.now().plusSeconds(timestamp) : Instant.ofEpochSecond(timestamp);
+        handler.update(color, style);
+
+        plugin.getConfig().set("bossbar.color", color.name());
+        plugin.getConfig().set("bossbar.style", style.name());
+        plugin.saveConfig();
+
+        sender.sendMessage(Component.text("Timer style updated").color(NamedTextColor.GREEN));
+
+        return Command.SINGLE_SUCCESS;
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
-        if (!sender.hasPermission(PERMISSION)) {
-            return null;
+    private int onCancel(CommandContext<CommandSourceStack> ctx) {
+        CommandSender sender = ctx.getSource().getSender();
+
+        if (!plugin.getRunnable().isRunning()) {
+            sender.sendMessage(Component.text("No timer is running").color(NamedTextColor.RED));
+            return Command.SINGLE_SUCCESS;
         }
 
-        List<String> toReturn = Lists.newArrayList();
+        plugin.getRunnable().cancel();
+        sender.sendMessage(Component.text("Timer cancelled").color(NamedTextColor.GREEN));
+        return Command.SINGLE_SUCCESS;
+    }
 
-        if (args.length == 1) {
-            toReturn.add("cancel");
-            toReturn.add("reload");
-            toReturn.add("update");
+    public int onReload(CommandContext<CommandSourceStack> ctx) {
+        CommandSender sender = ctx.getSource().getSender();
+
+        if (plugin.getRunnable().isRunning()) {
+            sender.sendMessage(Component.text("Cannot reload while a timer is running").color(NamedTextColor.RED));
+            return Command.SINGLE_SUCCESS;
         }
 
-        if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("update")) {
-                return colors;
-            }
+        plugin.getRunnable().cancel();
+        plugin.reloadConfig();
 
-            toReturn.addAll(Bukkit.getOnlinePlayers()
-                    .stream()
-                    .map(Player::getName)
-                    .collect(Collectors.toList()));
-        }
-
-        if (args.length == 3 && args[0].equalsIgnoreCase("update")) {
-            return styles;
-        }
-
-        return StringUtil.copyPartialMatches(args[args.length - 1], toReturn, Lists.newArrayList());
+        sender.sendMessage(Component.text("Timer config has been reloaded").color(NamedTextColor.GREEN));
+        return Command.SINGLE_SUCCESS;
     }
 }

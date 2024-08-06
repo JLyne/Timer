@@ -30,26 +30,33 @@ package com.leontg77.timer;
 import com.leontg77.timer.commands.TimerCommand;
 import com.leontg77.timer.handling.handlers.BossBarHandler;
 import com.leontg77.timer.runnable.TimerRunnable;
+import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Instant;
-import java.util.Objects;
 
 /**
  * Main class of the plugin.
  * 
  * @author LeonTG
  */
+@SuppressWarnings("UnstableApiUsage")
 public class Main extends JavaPlugin {
     public static final String PREFIX = "§cTimer §8» §7";
     
     @Override
     public void onEnable() {
         reloadConfig();
-        Objects.requireNonNull(getCommand("timer")).setExecutor(new TimerCommand(this));
+
+        LifecycleEventManager<Plugin> manager = getLifecycleManager();
+        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> new TimerCommand(this, event.registrar()));
     }
 
     private TimerRunnable runnable = null;
@@ -78,9 +85,10 @@ public class Main extends JavaPlugin {
         }
 
         FileConfiguration config = getConfig();
-        runnable = new TimerRunnable(this, new BossBarHandler(this,
-                                                              config.getString("bossbar.color", "pink"),
-                                                              config.getString("bossbar.style", "solid")));
+        BarColor color = BarColor.valueOf(config.getString("bossbar.color", "pink").toUpperCase());
+        BarStyle style = BarStyle.valueOf(config.getString("bossbar.style", "solid").toUpperCase());
+
+        runnable = new TimerRunnable(this, new BossBarHandler(this, color, style));
 
         if(config.getConfigurationSection("timer") != null) {
             long endTimestamp = config.getLong("timer.last-end-time");
