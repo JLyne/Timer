@@ -30,6 +30,7 @@ package com.leontg77.timer.runnable;
 import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
 import com.leontg77.timer.handling.handlers.BossBarHandler;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -59,7 +60,7 @@ public class TimerRunnable implements Runnable {
     private boolean countdown = true;
     private int jobId = -1;
 
-    private String message;
+    private Component message;
 
     private long remaining = 0;
     private long total = 0;
@@ -84,7 +85,7 @@ public class TimerRunnable implements Runnable {
         }
 
         if (remaining != newRemaining) {
-            handler.sendText(message + (countdown ? " " + timeToString(newRemaining) : ""));
+            handler.sendText(message.append(countdown ? friendlyTime(newRemaining) : Component.empty()));
             remaining = newRemaining;
         }
     }
@@ -98,7 +99,7 @@ public class TimerRunnable implements Runnable {
      * @param message the message to send
      * @param endTime the instant the timer should end at
      */
-    public void startSendingMessage(String message, Instant endTime) {
+    public void startSendingMessage(Component message, Instant endTime) {
         Instant now = Instant.now();
         this.remaining = Duration.between(now, endTime).getSeconds();
         this.total = this.remaining;
@@ -107,7 +108,7 @@ public class TimerRunnable implements Runnable {
         this.countdown = !endTime.isBefore(now);
         this.message = message;
 
-        handler.startTimer(message + (countdown ? " " + timeToString(remaining) : ""));
+        handler.startTimer(message.append(countdown ? friendlyTime(remaining) : Component.empty()));
 
         cancel();
         jobId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this, 0, 1L);
@@ -156,7 +157,7 @@ public class TimerRunnable implements Runnable {
      * @param seconds the number of seconds.
      * @return The converted seconds.
      */
-    private String timeToString(long seconds) {
+    private Component friendlyTime(long seconds) {
         int days = (int) Math.floor(seconds / (double) SECONDS_PER_DAY);
         seconds -= days * SECONDS_PER_DAY;
 
@@ -180,10 +181,10 @@ public class TimerRunnable implements Runnable {
             parts.add(minutes + "m");
         }
 
-        if(seconds > 0 || parts.size() == 0) {
+        if(seconds > 0 || parts.isEmpty()) {
             parts.add(seconds + "s");
         }
 
-        return String.join(" ", parts);
+        return Component.text(" " + String.join(" ", parts));
     }
 }

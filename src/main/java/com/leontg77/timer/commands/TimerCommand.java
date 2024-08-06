@@ -34,10 +34,9 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,7 +44,6 @@ import java.time.Instant;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
-import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static io.papermc.paper.command.brigadier.Commands.argument;
 import static io.papermc.paper.command.brigadier.Commands.literal;
 import static io.papermc.paper.command.brigadier.argument.ArgumentTypes.component;
@@ -66,16 +64,15 @@ public final class TimerCommand {
 		LiteralCommandNode<CommandSourceStack> timerCommand = literal("timer")
                 .requires(ctx -> ctx.getSender().hasPermission(PERMISSION))
                 .then(literal("start")
-                              .then(literal("duration").then(argument("duration", time(20))
-                                            .then(argument("text", greedyString())
                               .then(literal("duration").then(argument("duration", integer(1))
+                                            .then(argument("text", component())
                                                           .executes(ctx -> onStart(ctx, true)))))
                               .then(literal("endtime").then(argument("endtime", longArg())
                                             .then(argument("text", component())
                                                           .executes(ctx -> onStart(ctx, false))))))
                 .then(literal("setstyle")
-                              .then(argument("color", new BarColorArgumentType())
-                                            .then(argument("style", new BarStyleArgumentType())
+                              .then(argument("color", new BossBarColorArgumentType())
+                                            .then(argument("style", new BossBarOverlayArgumentType())
                                                           .executes(this::onSetStyle))))
                 .then(literal("cancel").executes(this::onCancel))
                 .then(literal("reload").executes(this::onReload))
@@ -93,7 +90,7 @@ public final class TimerCommand {
             return Command.SINGLE_SUCCESS;
         }
 
-        String text = ctx.getArgument("text", String.class);
+        Component text = ctx.getArgument("text", Component.class);
 
         Instant endTime;
 
@@ -104,11 +101,11 @@ public final class TimerCommand {
         }
 
         plugin.getConfig().set("timer.last-end-time", endTime.getEpochSecond());
-        plugin.getConfig().set("timer.last-message", text);
+        plugin.getConfig().setRichMessage("timer.last-message", text);
         plugin.saveConfig();
 
         plugin.getRunnable().startSendingMessage(text, endTime);
-        plugin.getLogger().info("Starting timer for \"" + text + "\"");
+        plugin.getLogger().info("Starting timer for \"" + Main.plain.serialize(text) + "\"");
         sender.sendMessage(Component.text("Timer started.").color(NamedTextColor.GREEN));
 
         return Command.SINGLE_SUCCESS;
@@ -117,8 +114,8 @@ public final class TimerCommand {
     private int onSetStyle(CommandContext<CommandSourceStack> ctx) {
         CommandSender sender = ctx.getSource().getSender();
         BossBarHandler handler = (BossBarHandler) plugin.getRunnable().getHandler();
-        BarColor color = ctx.getArgument("color", BarColor.class);
-        BarStyle style = ctx.getArgument("style", BarStyle.class);
+        BossBar.Color color = ctx.getArgument("color", BossBar.Color.class);
+        BossBar.Overlay style = ctx.getArgument("style", BossBar.Overlay.class);
 
         handler.update(color, style);
 

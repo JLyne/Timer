@@ -32,8 +32,9 @@ import com.leontg77.timer.handling.handlers.BossBarHandler;
 import com.leontg77.timer.runnable.TimerRunnable;
 import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
@@ -41,6 +42,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.Instant;
+import java.util.logging.Level;
 
 /**
  * Main class of the plugin.
@@ -49,7 +51,7 @@ import java.time.Instant;
  */
 @SuppressWarnings("UnstableApiUsage")
 public class Main extends JavaPlugin {
-    public static final String PREFIX = "§cTimer §8» §7";
+    public static final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
     
     @Override
     public void onEnable() {
@@ -85,23 +87,30 @@ public class Main extends JavaPlugin {
         }
 
         FileConfiguration config = getConfig();
-        BarColor color = BarColor.valueOf(config.getString("bossbar.color", "pink").toUpperCase());
-        BarStyle style = BarStyle.valueOf(config.getString("bossbar.style", "solid").toUpperCase());
 
-        runnable = new TimerRunnable(this, new BossBarHandler(this, color, style));
+        try {
+            BossBar.Color color = BossBar.Color.valueOf(config.getString("bossbar.color", "pink").toUpperCase());
+            BossBar.Overlay style = BossBar.Overlay.valueOf(config.getString("bossbar.style", "progress").toUpperCase());
 
-        if(config.getConfigurationSection("timer") != null) {
-            long endTimestamp = config.getLong("timer.last-end-time");
-            String message = config.getString("timer.last-message");
+            runnable = new TimerRunnable(this, new BossBarHandler(this, color, style));
 
-            if(endTimestamp > 0 && message != null) {
-                Instant endTime = Instant.ofEpochSecond(endTimestamp);
+            if(config.getConfigurationSection("timer") != null) {
+                long endTimestamp = config.getLong("timer.last-end-time");
+                Component message = config.getRichMessage("timer.last-message");
 
-                if(endTime.isAfter(Instant.now())) {
-                    getLogger().info("Resuming saved timer \"" + message + "\"");
-                    getRunnable().startSendingMessage(message, endTime);
+                if(endTimestamp > 0 && message != null) {
+                    Instant endTime = Instant.ofEpochSecond(endTimestamp);
+
+                    if(endTime.isAfter(Instant.now())) {
+                        getLogger().info("Resuming saved timer \"" + plain.serialize(message) + "\"");
+                        getRunnable().startSendingMessage(message, endTime);
+                    }
                 }
             }
+        } catch(Exception ex) {
+            getLogger().log(Level.WARNING,"Failed to resume saved timer", ex);
+            runnable = new TimerRunnable(this, new BossBarHandler(this, BossBar.Color.PINK,
+                                                                  BossBar.Overlay.PROGRESS));
         }
     }
 }

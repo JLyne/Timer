@@ -29,10 +29,9 @@ package com.leontg77.timer.handling.handlers;
 
 import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -46,37 +45,34 @@ import org.bukkit.event.player.PlayerJoinEvent;
 public class BossBarHandler implements TimerHandler, Listener {
     private final Main plugin;
 
-    public BossBarHandler(Main plugin, BarColor color, BarStyle style) {
+    public BossBarHandler(Main plugin, BossBar.Color color, BossBar.Overlay style) {
         this.plugin = plugin;
         this.color = color;
         this.style = style;
     }
 
     private BossBar bossBar = null;
-    private BarColor color;
-    private BarStyle style;
+    private BossBar.Color color;
+    private BossBar.Overlay style;
 
     @Override
-    public void startTimer(String text) {
-        bossBar = Bukkit.createBossBar(text, color, style);
-        bossBar.setProgress(1.0);
+    public void startTimer(Component text) {
+        bossBar = BossBar.bossBar(text, 1.0f, color, style);
 
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            bossBar.addPlayer(online);
-        }
+        Bukkit.getOnlinePlayers().forEach(p -> p.showBossBar(bossBar));
     }
 
     @Override
     public void onCancel() {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            bossBar.setVisible(false);
+            Bukkit.getOnlinePlayers().forEach(p -> p.hideBossBar(bossBar));
             bossBar = null;
         }, 20L);
     }
 
     @Override
-    public void sendText(String text) {
-        bossBar.setTitle(text);
+    public void sendText(Component text) {
+        bossBar.name(text);
     }
 
     /**
@@ -85,7 +81,7 @@ public class BossBarHandler implements TimerHandler, Listener {
      * @param newColor The new color.
      * @param newStyle The new style.
      */
-    public void update(BarColor newColor, BarStyle newStyle) {
+    public void update(BossBar.Color newColor, BossBar.Overlay newStyle) {
         this.color = newColor;
         this.style = newStyle;
 
@@ -93,8 +89,8 @@ public class BossBarHandler implements TimerHandler, Listener {
             return;
         }
 
-        bossBar.setColor(color);
-        bossBar.setStyle(style);
+        bossBar.color(color);
+        bossBar.overlay(style);
     }
 
     /**
@@ -104,7 +100,7 @@ public class BossBarHandler implements TimerHandler, Listener {
      * @param total The total seconds.
      */
     public void updateProgress(long remaining, long total) {
-        bossBar.setProgress(((double) remaining) / ((double) total));
+        bossBar.progress(((float) remaining) / ((float) total));
     }
 
     @EventHandler
@@ -113,7 +109,7 @@ public class BossBarHandler implements TimerHandler, Listener {
 
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (bossBar != null) {
-                bossBar.addPlayer(player);
+                player.showBossBar(bossBar);
             }
         });
     }

@@ -27,6 +27,9 @@
 
 package com.leontg77.timer.handling;
 
+
+import net.kyori.adventure.text.Component;
+
 /**
  * Timer handler super interface.
  *
@@ -38,7 +41,7 @@ public interface TimerHandler {
      *
      * @param text The text to display on it.
      */
-    void startTimer(String text);
+    void startTimer(Component text);
 
     /**
      * Stop the timer handler.
@@ -50,5 +53,5 @@ public interface TimerHandler {
      *
      * @param text The new text.
      */
-    void sendText(String text);
+    void sendText(Component text);
 }
