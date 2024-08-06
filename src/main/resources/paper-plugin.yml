@@ -1,0 +1,13 @@
+name: Timer
+main: com.leontg77.timer.Main
+version: @project.version@
+authors:
+  - Jim (AnEnragedPigeon)
+  - LeonTG
+description: Allows creation and management of bossbar timers.
+api-version: '1.21'
+
+permissions:
+  timer.manage:
+    description: Allows use of /timer command
+    default: op
