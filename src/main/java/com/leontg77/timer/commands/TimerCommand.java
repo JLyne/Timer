@@ -28,7 +28,6 @@
 package com.leontg77.timer.commands;
 
 import com.leontg77.timer.Main;
-import com.leontg77.timer.handling.handlers.BossBarHandler;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -84,7 +83,7 @@ public final class TimerCommand {
     private int onStart(CommandContext<CommandSourceStack> ctx, @NotNull TimerType type) {
         CommandSender sender = ctx.getSource().getSender();
 
-        if (plugin.getRunnable().isRunning()) {
+        if (plugin.getActiveTimer() != null) {
             sender.sendMessage(Component.text("Timer is already running, cancel with /timer cancel.")
                                        .color(NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
@@ -100,11 +99,7 @@ public final class TimerCommand {
             endTime = Instant.ofEpochSecond(ctx.getArgument("endtime", long.class));
         }
 
-        plugin.getConfig().set("timer.last-end-time", endTime.getEpochSecond());
-        plugin.getConfig().setRichMessage("timer.last-message", text);
-        plugin.saveConfig();
-
-        plugin.getRunnable().startSendingMessage(text, endTime);
+        plugin.createTimer(text, endTime);
         plugin.getLogger().info("Starting timer for \"" + Main.plain.serialize(text) + "\"");
         sender.sendMessage(Component.text("Timer started.").color(NamedTextColor.GREEN));
 
@@ -113,16 +108,10 @@ public final class TimerCommand {
 
     private int onSetStyle(CommandContext<CommandSourceStack> ctx) {
         CommandSender sender = ctx.getSource().getSender();
-        BossBarHandler handler = (BossBarHandler) plugin.getRunnable().getHandler();
         BossBar.Color color = ctx.getArgument("color", BossBar.Color.class);
         BossBar.Overlay style = ctx.getArgument("style", BossBar.Overlay.class);
 
-        handler.update(color, style);
-
-        plugin.getConfig().set("bossbar.color", color.name());
-        plugin.getConfig().set("bossbar.style", style.name());
-        plugin.saveConfig();
-
+        plugin.setStyle(color, style);
         sender.sendMessage(Component.text("Timer style updated").color(NamedTextColor.GREEN));
 
         return Command.SINGLE_SUCCESS;
@@ -131,12 +120,12 @@ public final class TimerCommand {
     private int onCancel(CommandContext<CommandSourceStack> ctx) {
         CommandSender sender = ctx.getSource().getSender();
 
-        if (!plugin.getRunnable().isRunning()) {
+        if (plugin.getActiveTimer() == null) {
             sender.sendMessage(Component.text("No timer is running").color(NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
-        plugin.getRunnable().cancel();
+        plugin.getActiveTimer().cancel();
         sender.sendMessage(Component.text("Timer cancelled").color(NamedTextColor.GREEN));
         return Command.SINGLE_SUCCESS;
     }
@@ -144,12 +133,12 @@ public final class TimerCommand {
     public int onReload(CommandContext<CommandSourceStack> ctx) {
         CommandSender sender = ctx.getSource().getSender();
 
-        if (plugin.getRunnable().isRunning()) {
+        if (plugin.getActiveTimer() != null) {
             sender.sendMessage(Component.text("Cannot reload while a timer is running").color(NamedTextColor.RED));
             return Command.SINGLE_SUCCESS;
         }
 
-        plugin.getRunnable().cancel();
+        plugin.getActiveTimer().cancel();
         plugin.reloadConfig();
 
         sender.sendMessage(Component.text("Timer config has been reloaded").color(NamedTextColor.GREEN));

@@ -41,17 +41,21 @@ public interface TimerHandler {
      *
      * @param text The text to display on it.
      */
-    void startTimer(Component text);
+    void show(Component text);
 
     /**
      * Stop the timer handler.
      */
-    void onCancel();
+    void hide();
 
     /**
      * Send a new packet of the text for the timer handler.
      *
      * @param text The new text.
      */
-    void sendText(Component text);
+    void setText(Component text);
+
+    default void updateProgress(long remaining, long total) {
+
+    }
 }

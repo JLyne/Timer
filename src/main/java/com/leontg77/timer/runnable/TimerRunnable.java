@@ -29,11 +29,10 @@ package com.leontg77.timer.runnable;
 
 import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
-import com.leontg77.timer.handling.handlers.BossBarHandler;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitScheduler;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -42,90 +41,65 @@ import java.util.ArrayList;
 /**
  * Timer runnable class.
  *
- * @author LeonTG & ghowdenb
+ * @author Jim, LeonTG & ghowdenb
  */
-public class TimerRunnable implements Runnable {
+public final class TimerRunnable implements Runnable {
     private final TimerHandler handler;
     private final Main plugin;
 
-    public TimerRunnable(Main plugin, TimerHandler handler) {
-        this.handler = handler;
-        this.plugin = plugin;
+    private final Component message;
+    private final Instant endTime;
 
-        if (handler instanceof Listener) {
-            Bukkit.getPluginManager().registerEvents((Listener) handler, plugin);
-        }
-    }
-
-    private boolean countdown = true;
+    private final boolean countdown;
     private int jobId = -1;
-
-    private Component message;
 
     private long remaining = 0;
     private long total = 0;
-    private Instant endTime = null;
+
+    public TimerRunnable(Component message, @Nullable Instant endTime, TimerHandler handler) {
+        this.plugin = Main.getInstance();
+        this.handler = handler;
+
+        this.message = message;
+        this.endTime = endTime;
+        this.countdown = endTime != null;
+
+        if(this.countdown) {
+            Instant now = Instant.now();
+            this.total = this.remaining = Duration.between(now, endTime).getSeconds();
+            handler.show(message.append(friendlyTime(remaining)));
+            jobId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this, 0, 1L);
+        } else {
+            handler.show(message);
+        }
+    }
 
     @Override
     public void run() {
-        if (handler instanceof BossBarHandler) {
-            if(countdown) {
-                ((BossBarHandler) handler).updateProgress(remaining, total);
-            } else {
-                ((BossBarHandler) handler).updateProgress(1, 1);
-            }
+        if(!countdown) {
+            return;
         }
 
         long newRemaining = Duration.between(Instant.now(), endTime).getSeconds();
 
-        if (countdown && newRemaining < 0) {
-            plugin.getLogger().info("Timer has ended for \"" + message + "\"");
-            cancel();
-            return;
-        }
-
         if (remaining != newRemaining) {
-            handler.sendText(message.append(countdown ? friendlyTime(newRemaining) : Component.empty()));
+            handler.setText(message.append(friendlyTime(newRemaining)));
             remaining = newRemaining;
+            handler.updateProgress(remaining, total);
         }
-    }
 
-    /**
-     * Starts this timer with the given message for the amount of invocations.
-     * Once complete the task will cancel itself.
-     *
-     * Overwrites any previous settings
-     *
-     * @param message the message to send
-     * @param endTime the instant the timer should end at
-     */
-    public void startSendingMessage(Component message, Instant endTime) {
-        Instant now = Instant.now();
-        this.remaining = Duration.between(now, endTime).getSeconds();
-        this.total = this.remaining;
-        this.endTime = endTime;
-
-        this.countdown = !endTime.isBefore(now);
-        this.message = message;
-
-        handler.startTimer(message.append(countdown ? friendlyTime(remaining) : Component.empty()));
-
-        cancel();
-        jobId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this, 0, 1L);
+        if(newRemaining == 0) {
+            plugin.getLogger().info("Timer has ended for \"" + Main.plain.serialize(message) + "\"");
+            cancel();
+        }
     }
 
     /**
      * Cancel the timer task if it's running.
      */
     public void cancel() {
-        if (jobId == -1) {
-            return;
-        }
-
         Bukkit.getScheduler().cancelTask(jobId);
-        jobId = -1;
-
-        handler.onCancel();
+        handler.hide();
     }
 
     /**
@@ -134,6 +108,10 @@ public class TimerRunnable implements Runnable {
      * @return True if it is, false otherwise.
      */
     public boolean isRunning() {
+        if(!countdown) {
+            return true;
+        }
+
         BukkitScheduler sch = Bukkit.getScheduler();
         return sch.isCurrentlyRunning(jobId) || sch.isQueued(jobId);
     }

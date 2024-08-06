@@ -36,10 +36,9 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.logging.Level;
@@ -52,47 +51,80 @@ import java.util.logging.Level;
 @SuppressWarnings("UnstableApiUsage")
 public class Main extends JavaPlugin {
     public static final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
-    
+    private static Main instance;
+
+    private BossBar.Color bossBarColor = BossBar.Color.PINK;
+    private BossBar.Overlay bossBarOverlay = BossBar.Overlay.PROGRESS;
+
     @Override
     public void onEnable() {
+        Main.instance = this;
         reloadConfig();
 
         LifecycleEventManager<Plugin> manager = getLifecycleManager();
         manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> new TimerCommand(this, event.registrar()));
     }
 
-    private TimerRunnable runnable = null;
+    private TimerRunnable activeTimer = null;
 
     /**
      * Get the current runnable for the timer.
      *
      * @return The current runnable.
      */
-    public TimerRunnable getRunnable() {
-        return runnable;
+    public @Nullable TimerRunnable getActiveTimer() {
+        if(activeTimer != null && !activeTimer.isRunning()) {
+            activeTimer = null;
+        }
+
+        return activeTimer;
+    }
+
+    public TimerRunnable createTimer(Component message, @Nullable Instant endTime) {
+        if(activeTimer != null) {
+            throw new IllegalStateException("Timer is already running");
+        }
+
+        getConfig().set("timer.last-end-time", endTime != null ? endTime.getEpochSecond() : null);
+        getConfig().setRichMessage("timer.last-message", message);
+        saveConfig();
+
+        activeTimer = new TimerRunnable(message, endTime, new BossBarHandler(bossBarColor, bossBarOverlay));
+        return activeTimer;
+    }
+
+    public void setStyle(BossBar.Color color, BossBar.Overlay overlay) {
+        bossBarColor = color;
+        bossBarOverlay = overlay;
+
+        getConfig().set("bossbar.color", color.name());
+        getConfig().set("bossbar.style", overlay.name());
+        saveConfig();
+
+        if(activeTimer != null && activeTimer.getHandler() instanceof BossBarHandler bossBarHandler) {
+            bossBarHandler.setStyle(color, overlay);
+        }
     }
 
     @Override
     public void reloadConfig() {
         super.reloadConfig();
 
-        if (getConfig().getConfigurationSection("bossbar") == null) {
-            getConfig().set("bossbar.color", "pink");
-            getConfig().set("bossbar.style", "solid");
-            saveConfig();
+        if(activeTimer != null) {
+            throw new IllegalStateException("Cannot reload while timer is running");
         }
 
-        if (runnable != null && runnable.getHandler() instanceof Listener) {
-            HandlerList.unregisterAll((Listener) runnable.getHandler());
+        if (getConfig().getConfigurationSection("bossbar") == null) {
+            getConfig().set("bossbar.color", bossBarColor.name());
+            getConfig().set("bossbar.style", bossBarOverlay.name());
+            saveConfig();
         }
 
         FileConfiguration config = getConfig();
 
         try {
-            BossBar.Color color = BossBar.Color.valueOf(config.getString("bossbar.color", "pink").toUpperCase());
-            BossBar.Overlay style = BossBar.Overlay.valueOf(config.getString("bossbar.style", "progress").toUpperCase());
-
-            runnable = new TimerRunnable(this, new BossBarHandler(this, color, style));
+            bossBarColor = BossBar.Color.valueOf(config.getString("bossbar.color", "pink").toUpperCase());
+            bossBarOverlay = BossBar.Overlay.valueOf(config.getString("bossbar.style", "progress").toUpperCase());
 
             if(config.getConfigurationSection("timer") != null) {
                 long endTimestamp = config.getLong("timer.last-end-time");
@@ -103,14 +135,16 @@ public class Main extends JavaPlugin {
 
                     if(endTime.isAfter(Instant.now())) {
                         getLogger().info("Resuming saved timer \"" + plain.serialize(message) + "\"");
-                        getRunnable().startSendingMessage(message, endTime);
+                        createTimer(message, endTime);
                     }
                 }
             }
         } catch(Exception ex) {
             getLogger().log(Level.WARNING,"Failed to resume saved timer", ex);
-            runnable = new TimerRunnable(this, new BossBarHandler(this, BossBar.Color.PINK,
-                                                                  BossBar.Overlay.PROGRESS));
         }
+    }
+
+    public static Main getInstance() {
+        return Main.instance;
     }
 }

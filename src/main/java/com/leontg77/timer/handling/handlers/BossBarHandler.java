@@ -42,13 +42,15 @@ import org.bukkit.event.player.PlayerJoinEvent;
  *
  * @author LeonTG
  */
-public class BossBarHandler implements TimerHandler, Listener {
+public final class BossBarHandler implements TimerHandler, Listener {
     private final Main plugin;
 
-    public BossBarHandler(Main plugin, BossBar.Color color, BossBar.Overlay style) {
-        this.plugin = plugin;
+    public BossBarHandler(BossBar.Color color, BossBar.Overlay style) {
+        this.plugin = Main.getInstance();
         this.color = color;
         this.style = style;
+
+        Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     private BossBar bossBar = null;
@@ -56,14 +58,16 @@ public class BossBarHandler implements TimerHandler, Listener {
     private BossBar.Overlay style;
 
     @Override
-    public void startTimer(Component text) {
-        bossBar = BossBar.bossBar(text, 1.0f, color, style);
+    public void show(Component text) {
+        if(bossBar == null) {
+            bossBar = BossBar.bossBar(text, 1.0f, color, style);
+        }
 
         Bukkit.getOnlinePlayers().forEach(p -> p.showBossBar(bossBar));
     }
 
     @Override
-    public void onCancel() {
+    public void hide() {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Bukkit.getOnlinePlayers().forEach(p -> p.hideBossBar(bossBar));
             bossBar = null;
@@ -71,7 +75,7 @@ public class BossBarHandler implements TimerHandler, Listener {
     }
 
     @Override
-    public void sendText(Component text) {
+    public void setText(Component text) {
         bossBar.name(text);
     }
 
@@ -81,7 +85,7 @@ public class BossBarHandler implements TimerHandler, Listener {
      * @param newColor The new color.
      * @param newStyle The new style.
      */
-    public void update(BossBar.Color newColor, BossBar.Overlay newStyle) {
+    public void setStyle(BossBar.Color newColor, BossBar.Overlay newStyle) {
         this.color = newColor;
         this.style = newStyle;
 
@@ -104,7 +108,7 @@ public class BossBarHandler implements TimerHandler, Listener {
     }
 
     @EventHandler
-    public void on(PlayerJoinEvent event) {
+    public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
         Bukkit.getScheduler().runTask(plugin, () -> {
