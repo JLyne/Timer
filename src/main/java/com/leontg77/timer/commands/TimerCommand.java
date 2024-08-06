@@ -65,10 +65,13 @@ public final class TimerCommand {
                 .then(literal("start")
                               .then(literal("duration").then(argument("duration", integer(1))
                                             .then(argument("text", component())
-                                                          .executes(ctx -> onStart(ctx, true)))))
+                                                          .executes(ctx -> onStart(ctx, TimerType.DURATION)))))
                               .then(literal("endtime").then(argument("endtime", longArg())
                                             .then(argument("text", component())
-                                                          .executes(ctx -> onStart(ctx, false))))))
+                                                          .executes(ctx -> onStart(ctx, TimerType.END_TIME)))))
+                              .then(literal("infinite")
+                                            .then(argument("text", component())
+                                                          .executes(ctx -> onStart(ctx, TimerType.INFINITE)))))
                 .then(literal("setstyle")
                               .then(argument("color", new BossBarColorArgumentType())
                                             .then(argument("style", new BossBarOverlayArgumentType())
@@ -91,12 +94,11 @@ public final class TimerCommand {
 
         Component text = ctx.getArgument("text", Component.class);
 
-        Instant endTime;
+        Instant endTime = null;
 
-        if(isDuration) {
-            endTime = Instant.now().plusSeconds(ctx.getArgument("duration", int.class));
-        } else {
-            endTime = Instant.ofEpochSecond(ctx.getArgument("endtime", long.class));
+        switch(type) {
+            case DURATION -> endTime = Instant.now().plusSeconds(ctx.getArgument("duration", int.class));
+            case END_TIME -> endTime = Instant.ofEpochSecond(ctx.getArgument("endtime", long.class));
         }
 
         plugin.createTimer(text, endTime);
@@ -130,7 +132,7 @@ public final class TimerCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    public int onReload(CommandContext<CommandSourceStack> ctx) {
+    private int onReload(CommandContext<CommandSourceStack> ctx) {
         CommandSender sender = ctx.getSource().getSender();
 
         if (plugin.getActiveTimer() != null) {
@@ -143,5 +145,11 @@ public final class TimerCommand {
 
         sender.sendMessage(Component.text("Timer config has been reloaded").color(NamedTextColor.GREEN));
         return Command.SINGLE_SUCCESS;
+    }
+
+    private enum TimerType {
+        DURATION,
+        END_TIME,
+        INFINITE
     }
 }
