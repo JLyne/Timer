@@ -5,7 +5,7 @@ authors:
   - Jim (AnEnragedPigeon)
   - LeonTG
 description: Allows creation and management of bossbar timers.
-api-version: '1.21.3'
+api-version: '1.21.4'
 
 permissions:
   timer.manage:
