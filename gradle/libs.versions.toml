@@ -1,0 +1,9 @@
+[versions]
+pluginYmlPaper = "0.6.0"
+paperApi = "1.21.4-R0.1-SNAPSHOT"
+
+[libraries]
+paperApi = { group = "io.papermc.paper", name = "paper-api", version.ref = "paperApi" }
+
+[plugins]
+pluginYmlPaper = { id = "net.minecrell.plugin-yml.paper", version.ref = "pluginYmlPaper" }
