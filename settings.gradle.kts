@@ -1,1 +1,1 @@
-rootProject.name = "timer"
+rootProject.name = "Timer"
