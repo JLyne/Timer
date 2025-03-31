@@ -67,7 +67,7 @@ public final class TimerRunnable implements Runnable {
         if(this.countdown) {
             Instant now = Instant.now();
             this.total = this.remaining = Duration.between(now, endTime).getSeconds();
-            handler.show(message.append(friendlyTime(remaining)));
+            handler.show(message.append(Component.text(" " + getFriendlyTime(remaining))));
             jobId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this, 0, 1L);
         } else {
             handler.show(message);
@@ -83,7 +83,7 @@ public final class TimerRunnable implements Runnable {
         long newRemaining = Duration.between(Instant.now(), endTime).getSeconds();
 
         if (remaining != newRemaining) {
-            handler.setText(message.append(friendlyTime(newRemaining)));
+            handler.setText(message.append(Component.text(" " + getFriendlyTime(remaining))));
             remaining = newRemaining;
             handler.updateProgress(remaining, total);
         }
@@ -135,7 +135,7 @@ public final class TimerRunnable implements Runnable {
      * @param seconds the number of seconds.
      * @return The converted seconds.
      */
-    private Component friendlyTime(long seconds) {
+    private String getFriendlyTime(long seconds) {
         int days = (int) Math.floor(seconds / (double) SECONDS_PER_DAY);
         seconds -= days * SECONDS_PER_DAY;
 
@@ -163,6 +163,60 @@ public final class TimerRunnable implements Runnable {
             parts.add(seconds + "s");
         }
 
-        return Component.text(" " + String.join(" ", parts));
+        return String.join(" ", parts);
+    }
+
+    private String getClockTime(long seconds) {
+        int days = (int) Math.floor(seconds / (double) SECONDS_PER_DAY);
+        seconds -= days * SECONDS_PER_DAY;
+
+        int hours = (int) Math.floor(seconds / (double) SECONDS_PER_HOUR);
+        seconds -= hours * SECONDS_PER_HOUR;
+
+        int minutes = (int) Math.floor(seconds / (double) SECONDS_PER_MINUTE);
+        seconds -= minutes * SECONDS_PER_MINUTE;
+
+        ArrayList<String> parts = new ArrayList<>();
+
+        if (days > 0) {
+            parts.add(String.valueOf(days));
+        }
+
+        if (hours > 0) {
+            parts.add(String.valueOf(hours));
+        }
+
+        parts.add(String.format("%02d", minutes));
+        parts.add(String.format("%02d", seconds));
+
+        return String.join(":", parts);
+    }
+
+    public Component getMessage() {
+        return message;
+    }
+
+    public Instant getEndTime() {
+        return endTime;
+    }
+
+    public long getRemaining() {
+        return remaining;
+    }
+
+    public String getFriendlyRemaining() {
+        return getFriendlyTime(remaining);
+    }
+
+    public String getClockRemaining() {
+        return getClockTime(remaining);
+    }
+
+    public long getTotal() {
+        return total;
+    }
+
+    public boolean isCountdown() {
+        return countdown;
     }
 }

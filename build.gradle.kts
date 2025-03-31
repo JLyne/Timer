@@ -1,4 +1,5 @@
 import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
+import net.minecrell.pluginyml.paper.PaperPluginDescription
 
 plugins {
     java
@@ -25,6 +26,7 @@ repositories {
 
 dependencies {
 	compileOnly(libs.paperApi)
+	compileOnly(libs.placeholderApi)
 }
 
 paper {
@@ -33,6 +35,13 @@ paper {
     apiVersion = libs.versions.paperApi.get().replace(Regex("\\-R\\d.\\d-SNAPSHOT"), "")
     authors = listOf("Jim (AnEnragedPigeon)", "LeonTG")
     description = "Allows creation and management of bossbar timers."
+
+    serverDependencies {
+        register("PlaceholderAPI") {
+            required = false
+            load = PaperPluginDescription.RelativeLoadOrder.AFTER
+        }
+    }
 
     permissions {
         register("timer.manage") {

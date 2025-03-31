@@ -36,6 +36,10 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.server.PluginDisableEvent;
+import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
@@ -49,20 +53,43 @@ import java.util.logging.Level;
  * @author LeonTG
  */
 @SuppressWarnings("UnstableApiUsage")
-public class Main extends JavaPlugin {
+public class Main extends JavaPlugin implements Listener {
     public static final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
     private static Main instance;
 
     private BossBar.Color bossBarColor = BossBar.Color.PINK;
     private BossBar.Overlay bossBarOverlay = BossBar.Overlay.PROGRESS;
+    private Placeholders expansion;
 
     @Override
     public void onEnable() {
         Main.instance = this;
         reloadConfig();
+        getServer().getPluginManager().registerEvents(this, this);
 
         LifecycleEventManager<Plugin> manager = getLifecycleManager();
         manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> new TimerCommand(this, event.registrar()));
+    }
+
+    @EventHandler
+    public void onPluginEnable(PluginEnableEvent event) {
+        switch (event.getPlugin().getName()) {
+            case "PlaceholderAPI" -> {
+                getLogger().info("Registering PlaceholderAPI expansion");
+                expansion = new Placeholders(this);
+                expansion.register();
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPluginDisable(PluginDisableEvent event) {
+        switch (event.getPlugin().getName()) {
+            case "PlaceholderAPI" -> {
+                getLogger().info("Disabling PlaceholderAPI expansion");
+                expansion = null;
+            }
+        }
     }
 
     private TimerRunnable activeTimer = null;
