@@ -17,11 +17,13 @@ java {
 }
 
 repositories {
-	mavenLocal()
-	mavenCentral()
 	maven {
 		url = uri("https://repo.papermc.io/repository/maven-public/")
 	}
+    maven {
+		url = uri("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+	}
+    mavenLocal()
 }
 
 dependencies {
