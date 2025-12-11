@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 1.1.0
  */
-@SuppressWarnings("UnstableApiUsage")
 public final class BossBarOverlayArgumentType implements CustomArgumentType.Converted<Overlay, String> {
 	private final List<String> styles = Arrays.stream(Overlay.values()).map(c -> c.name().toLowerCase()).toList();
 

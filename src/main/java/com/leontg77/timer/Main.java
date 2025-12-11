@@ -52,7 +52,6 @@ import java.util.logging.Level;
  * 
  * @author LeonTG
  */
-@SuppressWarnings("UnstableApiUsage")
 public class Main extends JavaPlugin implements Listener {
     public static final PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
     private static Main instance;

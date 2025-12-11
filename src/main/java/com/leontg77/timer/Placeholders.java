@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
  * This class will be registered through the register-method in the
  * plugins onEnable-method.
  */
-@SuppressWarnings("UnstableApiUsage")
 public class Placeholders extends PlaceholderExpansion {
     private final Main plugin;
 
@@ -76,7 +75,6 @@ public class Placeholders extends PlaceholderExpansion {
     /**
      * This is the version of the expansion.
      * <br>You don't have to use numbers, since it is set as a String.
-     *
      * For convenience do we return the version from the plugin.yml
      *
      * @return The version as a String.

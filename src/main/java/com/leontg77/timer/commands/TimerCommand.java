@@ -52,7 +52,6 @@ import static io.papermc.paper.command.brigadier.argument.ArgumentTypes.componen
  *
  * @author LeonTG
  */
-@SuppressWarnings("UnstableApiUsage")
 public final class TimerCommand {
     private final Main plugin;
     private static final String PERMISSION = "timer.manage";

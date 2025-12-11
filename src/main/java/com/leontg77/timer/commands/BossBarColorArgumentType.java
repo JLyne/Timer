@@ -20,7 +20,6 @@ import org.jetbrains.annotations.NotNull;
  *
  * @since 1.1.0
  */
-@SuppressWarnings("UnstableApiUsage")
 public final class BossBarColorArgumentType implements CustomArgumentType.Converted<BossBar.Color, String> {
 	private final List<String> colors = Arrays.stream(Color.values()).map(c -> c.name().toLowerCase()).toList();
 
