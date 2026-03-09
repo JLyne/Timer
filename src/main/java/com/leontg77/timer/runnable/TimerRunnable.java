@@ -31,8 +31,7 @@ import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -48,49 +47,53 @@ public final class TimerRunnable implements Runnable {
     private final Main plugin;
 
     private final Component message;
-    private final Instant endTime;
+    private  final @Nullable Instant endTime;
 
-    private final boolean countdown;
+    private final boolean infinite;
+    private final long total;
+
+    private long remaining;
     private int jobId = -1;
-
-    private long remaining = 0;
-    private long total = 0;
+    private boolean cancelled = false;
 
     public TimerRunnable(Component message, @Nullable Instant endTime, TimerHandler handler) {
-        this.plugin = Main.getInstance();
+        plugin = Main.getInstance();
         this.handler = handler;
 
         this.message = message;
         this.endTime = endTime;
-        this.countdown = endTime != null;
+        infinite = endTime == null;
 
-        if(this.countdown) {
+        if(infinite) {
+            handler.show(message);
+            remaining = Long.MAX_VALUE;
+            total = Long.MAX_VALUE;
+        } else {
             Instant now = Instant.now();
-            this.total = this.remaining = Duration.between(now, endTime).getSeconds();
+            total = endTime.getEpochSecond() - now.getEpochSecond();
+            remaining = total;
             handler.show(message.append(Component.text(" " + getFriendlyTime(remaining))));
             jobId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this, 0, 1L);
-        } else {
-            handler.show(message);
         }
     }
 
     @Override
     public void run() {
-        if(!countdown) {
+        if(infinite) {
             return;
         }
 
         long newRemaining = Duration.between(Instant.now(), endTime).getSeconds();
 
         if (remaining != newRemaining) {
-            handler.setText(message.append(Component.text(" " + getFriendlyTime(remaining))));
             remaining = newRemaining;
+            handler.setText(message.append(Component.text(" " + getFriendlyTime(remaining))));
             handler.updateProgress(remaining, total);
-        }
 
-        if(newRemaining == 0) {
-            plugin.getLogger().info("Timer has ended for \"" + Main.plain.serialize(message) + "\"");
-            cancel();
+            if(remaining == 0) {
+                plugin.getLogger().info("Timer has ended for \"" + Main.plain.serialize(message) + "\"");
+                cancel();
+            }
         }
     }
 
@@ -98,8 +101,16 @@ public final class TimerRunnable implements Runnable {
      * Cancel the timer task if it's running.
      */
     public void cancel() {
-        Bukkit.getScheduler().cancelTask(jobId);
+        if (cancelled) {
+            return;
+        }
+
         handler.hide();
+        cancelled = true;
+
+        if (!infinite) {
+            Bukkit.getScheduler().cancelTask(jobId);
+        }
     }
 
     /**
@@ -108,12 +119,7 @@ public final class TimerRunnable implements Runnable {
      * @return True if it is, false otherwise.
      */
     public boolean isRunning() {
-        if(!countdown) {
-            return true;
-        }
-
-        BukkitScheduler sch = Bukkit.getScheduler();
-        return sch.isCurrentlyRunning(jobId) || sch.isQueued(jobId);
+        return !cancelled;
     }
 
     /**
@@ -196,7 +202,7 @@ public final class TimerRunnable implements Runnable {
         return message;
     }
 
-    public Instant getEndTime() {
+    public @Nullable Instant getEndTime() {
         return endTime;
     }
 
@@ -216,7 +222,7 @@ public final class TimerRunnable implements Runnable {
         return total;
     }
 
-    public boolean isCountdown() {
-        return countdown;
+    public boolean isInfinite() {
+        return infinite;
     }
 }

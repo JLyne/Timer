@@ -110,21 +110,21 @@ public class Placeholders extends PlaceholderExpansion {
 				return Main.plain.serialize(activeTimer.getMessage());
 			}
 			case "active_remaining" -> {
-				if (!activeTimer.isCountdown()) {
+				if (activeTimer.isInfinite()) {
 					return "";
 				}
 
 				return String.valueOf(activeTimer.getRemaining());
 			}
 			case "active_remaining_clock" -> {
-				if (!activeTimer.isCountdown()) {
+				if (activeTimer.isInfinite()) {
 					return "";
 				}
 
 				return activeTimer.getClockRemaining();
 			}
 			case "active_remaining_human" -> {
-				if (!activeTimer.isCountdown()) {
+				if (activeTimer.isInfinite()) {
 					return "";
 				}
 
