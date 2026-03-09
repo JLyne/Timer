@@ -36,6 +36,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Boss bar timer handler.
@@ -44,23 +45,30 @@ import org.bukkit.event.player.PlayerJoinEvent;
  */
 public final class BossBarHandler implements TimerHandler, Listener {
     private final Main plugin;
+    public static BossBar.Color defaultColor = BossBar.Color.PINK;
+    public static BossBar.Overlay defaultStyle = BossBar.Overlay.PROGRESS;
 
-    public BossBarHandler(BossBar.Color color, BossBar.Overlay style) {
+    public BossBarHandler() {
         this.plugin = Main.getInstance();
-        this.color = color;
-        this.style = style;
-
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
+    public BossBarHandler(BossBar.Color color, BossBar.Overlay style) {
+        this();
+        this.colorOverride = color;
+        this.styleOverride = style;
+    }
+
     private BossBar bossBar = null;
-    private BossBar.Color color;
-    private BossBar.Overlay style;
+    private BossBar.Color colorOverride;
+    private BossBar.Overlay styleOverride;
 
     @Override
     public void show(Component text) {
         if(bossBar == null) {
-            bossBar = BossBar.bossBar(text, 1.0f, color, style);
+            bossBar = BossBar.bossBar(text, 1.0f,
+                                      colorOverride != null ? colorOverride : defaultColor,
+                                      styleOverride != null ? styleOverride : defaultStyle);
         }
 
         Bukkit.getOnlinePlayers().forEach(p -> p.showBossBar(bossBar));
@@ -80,21 +88,71 @@ public final class BossBarHandler implements TimerHandler, Listener {
     }
 
     /**
-     * Update the color and style of this boss bar.
+     * Get the color override set for this bossbar
+     *
+     * @return The color.
+     */
+    public BossBar.@Nullable Color getColorOverride() {
+        return colorOverride;
+    }
+
+    /**
+     * Get the style override set for this bossbar
+     *
+     * @return The style
+     */
+    public BossBar.@Nullable Overlay getStyleOverride() {
+        return styleOverride;
+    }
+
+    /**
+     * Override the color this boss bar.
      *
      * @param newColor The new color.
-     * @param newStyle The new style.
      */
-    public void setStyle(BossBar.Color newColor, BossBar.Overlay newStyle) {
-        this.color = newColor;
-        this.style = newStyle;
+    public void setColorOverride(BossBar.Color newColor) {
+        this.colorOverride = newColor;
 
         if (bossBar == null) {
             return;
         }
 
-        bossBar.color(color);
-        bossBar.overlay(style);
+        bossBar.color(colorOverride);
+    }
+
+    /**
+     * Override the style this boss bar.
+     *
+     * @param newStyle The new style.
+     */
+    public void setStyleOverride(BossBar.Overlay newStyle) {
+        this.styleOverride = newStyle;
+
+        if (bossBar == null) {
+            return;
+        }
+
+        bossBar.overlay(styleOverride);
+    }
+
+    public void resetColor() {
+        this.colorOverride = null;
+
+        if (bossBar == null) {
+            return;
+        }
+
+        bossBar.color(defaultColor);
+    }
+
+    public void resetStyle() {
+        this.styleOverride = null;
+
+        if (bossBar == null) {
+            return;
+        }
+
+        bossBar.overlay(defaultStyle);
     }
 
     /**

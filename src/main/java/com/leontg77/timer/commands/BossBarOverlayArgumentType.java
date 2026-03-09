@@ -8,7 +8,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import net.kyori.adventure.bossbar.BossBar.Overlay;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Arrays;
 import java.util.List;
@@ -23,7 +23,7 @@ public final class BossBarOverlayArgumentType implements CustomArgumentType.Conv
 	private final List<String> styles = Arrays.stream(Overlay.values()).map(c -> c.name().toLowerCase()).toList();
 
 	@Override
-	public @NotNull Overlay convert(@NotNull String input) throws CommandSyntaxException {
+	public @NonNull Overlay convert(@NonNull String input) throws CommandSyntaxException {
 		if(!styles.contains(input.toLowerCase())) {
 			throw new SimpleCommandExceptionType(new LiteralMessage(input + " is not a valid bossbar style"))
 					.create();
@@ -33,13 +33,13 @@ public final class BossBarOverlayArgumentType implements CustomArgumentType.Conv
 	}
 
 	@Override
-	public @NotNull StringArgumentType getNativeType() {
+	public @NonNull StringArgumentType getNativeType() {
 		return StringArgumentType.word();
 	}
 
 	@Override
-	public @NotNull <S> CompletableFuture<Suggestions> listSuggestions(
-			com.mojang.brigadier.context.@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
+	public @NonNull <S> CompletableFuture<Suggestions> listSuggestions(
+			com.mojang.brigadier.context.@NonNull CommandContext<S> context, @NonNull SuggestionsBuilder builder) {
 		String search = builder.getRemainingLowerCase();
 
 		styles.stream().filter(style -> style.startsWith(search)).forEach(builder::suggest);

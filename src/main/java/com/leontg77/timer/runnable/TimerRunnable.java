@@ -29,8 +29,11 @@ package com.leontg77.timer.runnable;
 
 import com.leontg77.timer.Main;
 import com.leontg77.timer.handling.TimerHandler;
+import com.leontg77.timer.handling.handlers.BossBarHandler;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
@@ -46,8 +49,9 @@ public final class TimerRunnable implements Runnable {
     private final TimerHandler handler;
     private final Main plugin;
 
+    private final NamespacedKey id;
     private final Component message;
-    private  final @Nullable Instant endTime;
+    private final @Nullable Instant endTime;
 
     private final boolean infinite;
     private final long total;
@@ -56,10 +60,11 @@ public final class TimerRunnable implements Runnable {
     private int jobId = -1;
     private boolean cancelled = false;
 
-    public TimerRunnable(Component message, @Nullable Instant endTime, TimerHandler handler) {
+    public TimerRunnable(NamespacedKey id, Component message, @Nullable Instant endTime, TimerHandler handler) {
         plugin = Main.getInstance();
         this.handler = handler;
 
+        this.id = id;
         this.message = message;
         this.endTime = endTime;
         infinite = endTime == null;
@@ -91,7 +96,7 @@ public final class TimerRunnable implements Runnable {
             handler.updateProgress(remaining, total);
 
             if(remaining == 0) {
-                plugin.getLogger().info("Timer has ended for \"" + Main.plain.serialize(message) + "\"");
+                plugin.getLogger().info("Timer " + id + " has ended");
                 cancel();
             }
         }
@@ -120,15 +125,6 @@ public final class TimerRunnable implements Runnable {
      */
     public boolean isRunning() {
         return !cancelled;
-    }
-
-    /**
-     * Get the handler for the timer.
-     *
-     * @return The timer handler.
-     */
-    public TimerHandler getHandler() {
-        return handler;
     }
 
     private static final long SECONDS_PER_DAY = 86400;
@@ -198,6 +194,10 @@ public final class TimerRunnable implements Runnable {
         return String.join(":", parts);
     }
 
+    public NamespacedKey getId() {
+        return id;
+    }
+
     public Component getMessage() {
         return message;
     }
@@ -224,5 +224,45 @@ public final class TimerRunnable implements Runnable {
 
     public boolean isInfinite() {
         return infinite;
+    }
+
+    public BossBar.@Nullable Color getColorOverride() {
+        if (!(handler instanceof BossBarHandler bossBarHandler)) {
+            return null;
+        }
+
+        return bossBarHandler.getColorOverride();
+    }
+
+    public BossBar.@Nullable Overlay getStyleOverride() {
+        if (!(handler instanceof BossBarHandler bossBarHandler)) {
+            return null;
+        }
+
+        return bossBarHandler.getStyleOverride();
+    }
+
+    public void setColorOverride(BossBar.Color color) {
+        if (handler instanceof BossBarHandler bossBarHandler) {
+            bossBarHandler.setColorOverride(color);
+        }
+    }
+
+    public void setStyleOverride(BossBar.Overlay style) {
+        if (handler instanceof BossBarHandler bossBarHandler) {
+            bossBarHandler.setStyleOverride(style);
+        }
+    }
+
+    public void resetColor() {
+        if (handler instanceof BossBarHandler bossBarHandler) {
+            bossBarHandler.resetColor();
+        }
+    }
+
+    public void resetStyle() {
+        if (handler instanceof BossBarHandler bossBarHandler) {
+            bossBarHandler.resetStyle();
+        }
     }
 }

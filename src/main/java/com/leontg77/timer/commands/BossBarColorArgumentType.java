@@ -13,7 +13,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.bossbar.BossBar.Color;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Argument parser for {@link Color Colors}
@@ -24,7 +24,7 @@ public final class BossBarColorArgumentType implements CustomArgumentType.Conver
 	private final List<String> colors = Arrays.stream(Color.values()).map(c -> c.name().toLowerCase()).toList();
 
 	@Override
-	public @NotNull Color convert(@NotNull String input) throws CommandSyntaxException {
+	public @NonNull Color convert(@NonNull String input) throws CommandSyntaxException {
 		if(!colors.contains(input.toLowerCase())) {
 			throw new SimpleCommandExceptionType(new LiteralMessage(input + " is not a valid bossbar color"))
 					.create();
@@ -34,13 +34,13 @@ public final class BossBarColorArgumentType implements CustomArgumentType.Conver
 	}
 
 	@Override
-	public @NotNull StringArgumentType getNativeType() {
+	public @NonNull StringArgumentType getNativeType() {
 		return StringArgumentType.word();
 	}
 
 	@Override
-	public @NotNull <S> CompletableFuture<Suggestions> listSuggestions(
-			com.mojang.brigadier.context.@NotNull CommandContext<S> context, @NotNull SuggestionsBuilder builder) {
+	public @NonNull <S> CompletableFuture<Suggestions> listSuggestions(
+			com.mojang.brigadier.context.@NonNull CommandContext<S> context, @NonNull SuggestionsBuilder builder) {
 		String search = builder.getRemainingLowerCase();
 
 		colors.stream().filter(color -> color.startsWith(search)).forEach(builder::suggest);

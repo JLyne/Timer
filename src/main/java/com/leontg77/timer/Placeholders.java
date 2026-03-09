@@ -2,8 +2,9 @@ package com.leontg77.timer;
 
 import com.leontg77.timer.runnable.TimerRunnable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 /**
  * This class will be registered through the register-method in the
@@ -54,7 +55,7 @@ public class Placeholders extends PlaceholderExpansion {
      * @return The name of the author as a String.
      */
     @Override
-    public @NotNull String getAuthor() {
+    public @NonNull String getAuthor() {
         return plugin.getPluginMeta().getAuthors().toString();
     }
 
@@ -68,7 +69,7 @@ public class Placeholders extends PlaceholderExpansion {
      * @return The identifier in {@code %<identifier>_<value>%} as String.
      */
     @Override
-    public @NotNull String getIdentifier() {
+    public @NonNull String getIdentifier() {
         return "timer";
     }
 
@@ -80,7 +81,7 @@ public class Placeholders extends PlaceholderExpansion {
      * @return The version as a String.
      */
     @Override
-    public @NotNull String getVersion() {
+    public @NonNull String getVersion() {
         return plugin.getPluginMeta().getVersion();
     }
 
@@ -98,37 +99,53 @@ public class Placeholders extends PlaceholderExpansion {
      * @return possibly-null String of the requested identifier.
      */
     @Override
-    public String onPlaceholderRequest(Player player, @NotNull String identifier) {
-        TimerRunnable activeTimer = plugin.getActiveTimer();
+    public String onPlaceholderRequest(Player player, @NonNull String identifier) {
+		TimerRunnable timer = null;
 
-        if(activeTimer == null) {
+		int startIndex = identifier.lastIndexOf("{");
+        int endIndex = identifier.indexOf("}", startIndex);
+
+        if (startIndex != -1 && endIndex != -1) {
+            String id = identifier.substring(startIndex + 1, endIndex);
+			NamespacedKey key = NamespacedKey.fromString(id);
+
+			if (key == null) {
+				return "";
+			}
+
+			timer = plugin.getActiveTimer(key);
+        }
+
+        if(timer == null) {
             return "";
         }
 
-		switch (identifier) {
-			case "active_message" -> {
-				return Main.plain.serialize(activeTimer.getMessage());
+		String type = identifier.substring(0, startIndex);
+
+		switch (type) {
+			case "message" -> {
+				return Main.plain.serialize(timer.getMessage());
 			}
-			case "active_remaining" -> {
-				if (activeTimer.isInfinite()) {
+			case "remaining" -> {
+				if (timer.isInfinite()) {
 					return "";
 				}
 
-				return String.valueOf(activeTimer.getRemaining());
+				return String.valueOf(timer.getRemaining());
 			}
-			case "active_remaining_clock" -> {
-				if (activeTimer.isInfinite()) {
+			case "remaining_clock" -> {
+				if (timer.isInfinite()) {
 					return "";
 				}
 
-				return activeTimer.getClockRemaining();
+				return timer.getClockRemaining();
 			}
-			case "active_remaining_human" -> {
-				if (activeTimer.isInfinite()) {
+			case "remaining_human" -> {
+				if (timer.isInfinite()) {
 					return "";
 				}
 
-				return activeTimer.getFriendlyRemaining();
+				return timer.getFriendlyRemaining();
 			}
 		}
 
