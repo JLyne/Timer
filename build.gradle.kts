@@ -34,7 +34,7 @@ dependencies {
 paper {
     main = "com.leontg77.timer.Main"
     generateLibrariesJson = true
-    apiVersion = libs.versions.paperApi.get().replace(Regex("\\-R\\d.\\d-SNAPSHOT"), "")
+    apiVersion = libs.versions.paperApi.get().replace(".build.+", "")
     authors = listOf("Jim (AnEnragedPigeon)", "LeonTG")
     description = "Allows creation and management of bossbar timers."
 
