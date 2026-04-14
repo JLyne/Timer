@@ -46,30 +46,36 @@ import java.util.ArrayList;
  * @author Jim, LeonTG & ghowdenb
  */
 public final class TimerRunnable implements Runnable {
+    public static Component pausedPrefix = Component.text("⏸️");
     private final TimerHandler handler;
     private final Main plugin;
 
     private final NamespacedKey id;
     private final Component message;
-    private final @Nullable Instant endTime;
+    private @Nullable Instant endTime;
+    private @Nullable Instant pauseTime = null;
 
-    private final boolean infinite;
-    private final long total;
+    private long total;
 
     private long remaining;
     private int jobId = -1;
     private boolean cancelled = false;
 
     public TimerRunnable(NamespacedKey id, Component message, @Nullable Instant endTime, TimerHandler handler) {
+        this(id, message, endTime, null, handler);
+    }
+
+    public TimerRunnable(NamespacedKey id, Component message, @Nullable Instant endTime,
+                         @Nullable Instant pauseTime, TimerHandler handler) {
         plugin = Main.getInstance();
         this.handler = handler;
 
         this.id = id;
         this.message = message;
         this.endTime = endTime;
-        infinite = endTime == null;
+        this.pauseTime = pauseTime;
 
-        if(infinite) {
+        if(isInfinite()) {
             handler.show(message);
             remaining = Long.MAX_VALUE;
             total = Long.MAX_VALUE;
@@ -84,7 +90,7 @@ public final class TimerRunnable implements Runnable {
 
     @Override
     public void run() {
-        if(infinite) {
+        if(isCancelled() || isInfinite() || pauseTime != null) {
             return;
         }
 
@@ -92,7 +98,12 @@ public final class TimerRunnable implements Runnable {
 
         if (remaining != newRemaining) {
             remaining = newRemaining;
-            handler.setText(message.append(Component.text(" " + getFriendlyTime(remaining))));
+            handler.setText(
+                Component.text()
+                        .append(message)
+                        .append(Component.space())
+                        .append(Component.text(getFriendlyTime(remaining)))
+                        .build());
             handler.updateProgress(remaining, total);
 
             if(remaining == 0) {
@@ -113,18 +124,77 @@ public final class TimerRunnable implements Runnable {
         handler.hide();
         cancelled = true;
 
-        if (!infinite) {
+        if (!isInfinite()) {
             Bukkit.getScheduler().cancelTask(jobId);
         }
     }
 
     /**
-     * Check if the timer is currently running.
+     * Pause the timer task if it's running.
+     */
+    public void pause() {
+        if (cancelled || isPaused()) {
+            return;
+        }
+
+        if (isInfinite()) {
+            throw new IllegalStateException("Infinite timers cannot be paused");
+        }
+
+        pauseTime = Instant.now();
+        handler.setText(
+                Component.text()
+                        .append(pausedPrefix)
+                        .append(Component.space())
+                        .append(message)
+                        .append(Component.space())
+                        .append(Component.text(getFriendlyTime(remaining)))
+                        .build());
+    }
+
+    /**
+     * Resume the timer task if it's paused.
+     */
+    public void resume() {
+        if (cancelled || !isPaused()) {
+            return;
+        }
+
+        if (isInfinite()) {
+            throw new IllegalStateException("Infinite timers cannot be resumed");
+        }
+
+        Instant now = Instant.now();
+        long timeToAdd = Math.max(0, now.getEpochSecond() - pauseTime.getEpochSecond());
+
+        endTime = endTime.plusSeconds(timeToAdd);
+        total += timeToAdd;
+
+        pauseTime = null;
+        handler.setText(
+                Component.text()
+                        .append(message)
+                        .append(Component.space())
+                        .append(Component.text(getFriendlyTime(remaining)))
+                        .build());
+    }
+
+    /**
+     * Check if the timer has been canceled.
+     *
+     * @return True if it has, false otherwise.
+     */
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    /**
+     * Check if the timer is currently paused.
      *
      * @return True if it is, false otherwise.
      */
-    public boolean isRunning() {
-        return !cancelled;
+    public boolean isPaused() {
+        return pauseTime != null;
     }
 
     private static final long SECONDS_PER_DAY = 86400;
@@ -185,7 +255,11 @@ public final class TimerRunnable implements Runnable {
         }
 
         if (hours > 0) {
-            parts.add(String.valueOf(hours));
+            if (days > 0) {
+                parts.add(String.format("%02d", hours));
+            } else {
+                parts.add(String.valueOf(hours));
+            }
         }
 
         parts.add(String.format("%02d", minutes));
@@ -206,6 +280,10 @@ public final class TimerRunnable implements Runnable {
         return endTime;
     }
 
+    public @Nullable Instant getPauseTime() {
+        return pauseTime;
+    }
+
     public long getRemaining() {
         return remaining;
     }
@@ -223,7 +301,7 @@ public final class TimerRunnable implements Runnable {
     }
 
     public boolean isInfinite() {
-        return infinite;
+        return endTime == null;
     }
 
     public BossBar.@Nullable Color getColorOverride() {

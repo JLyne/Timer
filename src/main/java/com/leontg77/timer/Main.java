@@ -56,7 +56,7 @@ import java.util.logging.Level;
 
 /**
  * Main class of the plugin.
- * 
+ *
  * @author LeonTG
  */
 public class Main extends JavaPlugin implements Listener {
@@ -78,29 +78,7 @@ public class Main extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        ConfigurationSection timers = new MemoryConfiguration();
-        getActiveTimers().forEach((key, value) -> {
-            timers.setRichMessage(key + ".message", value.getMessage());
-
-            Instant endTime = value.getEndTime();
-            BossBar.Color colorOverride = value.getColorOverride();
-            BossBar.Overlay styleOverride = value.getStyleOverride();
-
-            if (endTime != null) {
-                timers.set(key + ".end-time", endTime.getEpochSecond());
-            }
-
-            if (colorOverride != null) {
-                timers.set(key + ".color", colorOverride.name());
-            }
-
-            if (styleOverride != null) {
-                timers.set(key + ".style", styleOverride.name());
-            }
-        });
-
-        getConfig().set("timers", timers);
-        saveConfig();
+        saveTimers();
     }
 
     @EventHandler
@@ -125,7 +103,36 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private void updateActiveTimers() {
-		activeTimers.entrySet().removeIf(entry -> !entry.getValue().isRunning());
+		activeTimers.entrySet().removeIf(entry -> entry.getValue().isCancelled());
+    }
+
+    public void saveTimers() {
+        updateActiveTimers();
+
+        ConfigurationSection timers = new MemoryConfiguration();
+
+        getActiveTimers().forEach((key, value) -> {
+            timers.setRichMessage(key + ".message", value.getMessage());
+
+            Instant endTime = value.getEndTime();
+            Instant pauseTime = value.getPauseTime();
+            BossBar.Color colorOverride = value.getColorOverride();
+            BossBar.Overlay styleOverride = value.getStyleOverride();
+
+            timers.set(key + ".end-time", endTime != null ? endTime.getEpochSecond() : 0);
+            timers.set(key + ".pause-time", pauseTime != null ? pauseTime.getEpochSecond() : 0);
+
+            if (colorOverride != null) {
+                timers.set(key + ".color", colorOverride.name());
+            }
+
+            if (styleOverride != null) {
+                timers.set(key + ".style", styleOverride.name());
+            }
+        });
+
+        getConfig().set("timers", timers);
+        saveConfig();
     }
 
     /**
@@ -155,28 +162,23 @@ public class Main extends JavaPlugin implements Listener {
             throw new IllegalArgumentException("Timer " + id + " already exists");
         }
 
-        getConfig().set("timers." + id + ".end-time", endTime != null ? endTime.getEpochSecond() : null);
-        getConfig().setRichMessage("timers." + id + ".message", message);
-        saveConfig();
-
         TimerRunnable timer = new TimerRunnable(id, message, endTime, new BossBarHandler());
         activeTimers.put(id, timer);
+        saveTimers();
         return timer;
     }
 
-    public TimerRunnable createTimer(NamespacedKey id, Component message, @Nullable Instant endTime,
-                                     BossBar.@Nullable Color colorOverride, BossBar.@Nullable Overlay styleOverride) {
+    private TimerRunnable createTimer(NamespacedKey id, Component message, @Nullable Instant endTime,
+                                     @Nullable Instant pauseTime, BossBar.@Nullable Color colorOverride,
+                                     BossBar.@Nullable Overlay styleOverride
+                                     ) {
         updateActiveTimers();
 
         if (activeTimers.containsKey(id)) {
             throw new IllegalArgumentException("Timer " + id + " already exists");
         }
 
-        getConfig().set("timers." + id + ".end-time", endTime != null ? endTime.getEpochSecond() : null);
-        getConfig().setRichMessage("timers." + id + ".message", message);
-        saveConfig();
-
-        TimerRunnable timer = new TimerRunnable(id, message, endTime, new BossBarHandler(colorOverride, styleOverride));
+        TimerRunnable timer = new TimerRunnable(id, message, endTime, pauseTime, new BossBarHandler(colorOverride, styleOverride));
         activeTimers.put(id, timer);
         return timer;
     }
@@ -203,17 +205,19 @@ public class Main extends JavaPlugin implements Listener {
             throw new IllegalStateException("Cannot reload while timer is running");
         }
 
-        if (getConfig().getConfigurationSection("bossbar") == null) {
-            getConfig().set("bossbar.color", BossBarHandler.defaultColor.name());
-            getConfig().set("bossbar.style", BossBarHandler.defaultStyle.name());
-            saveConfig();
-        }
+        getConfig().addDefault("bossbar.color", BossBarHandler.defaultColor.name());
+        getConfig().addDefault("bossbar.style", BossBarHandler.defaultStyle.name());
+        getConfig().addDefault("general.paused-prefix", Component.text("⏸️"));
+        getConfig().addDefault("timers", Collections.emptyMap());
+        saveConfig();
+        super.reloadConfig();
 
         FileConfiguration config = getConfig();
 
         try {
             BossBarHandler.defaultColor = BossBar.Color.valueOf(config.getString("bossbar.color", "pink").toUpperCase());
             BossBarHandler.defaultStyle = BossBar.Overlay.valueOf(config.getString("bossbar.style", "progress").toUpperCase());
+            TimerRunnable.pausedPrefix = config.getRichMessage("general.paused-prefix", Component.text("⏸️"));
 
             ConfigurationSection timers = config.getConfigurationSection("timers");
 
@@ -226,6 +230,7 @@ public class Main extends JavaPlugin implements Listener {
 
                     if (timer != null) {
                         long endTimestamp = timer.getLong("end-time");
+                        long pauseTimestamp = timer.getLong("pause-time");
                         Component message = timer.getRichMessage("message");
                         String colorString = timer.getString("color");
                         String styleString = timer.getString("style");
@@ -234,10 +239,18 @@ public class Main extends JavaPlugin implements Listener {
 
                         if(endTimestamp > 0 && message != null) {
                             Instant endTime = Instant.ofEpochSecond(endTimestamp);
+                            Instant pauseTime = null;
+
+                            if (pauseTimestamp > 0) {
+                                Instant now = Instant.now();
+                                pauseTime = now;
+                                long timeToAdd = Math.max(0, now.getEpochSecond() - pauseTimestamp);
+                                endTime = endTime.plusSeconds(timeToAdd);
+                            }
 
                             if(endTime.isAfter(Instant.now())) {
                                 getLogger().info("Resuming saved timer " + id + "(\"" + plain.serialize(message) + "\")");
-                                createTimer(id, message, endTime, colorOverride, styleOverride);
+                                createTimer(id, message, endTime, pauseTime, colorOverride, styleOverride);
                             }
                         }
                     }

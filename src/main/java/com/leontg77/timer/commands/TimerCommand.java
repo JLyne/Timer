@@ -66,6 +66,8 @@ public final class TimerCommand {
         this.plugin = plugin;
 
         TimerArgumentType timerArgumentType = new TimerArgumentType(plugin);
+        TimerArgumentType pausedTimerArgumentType = new TimerArgumentType(plugin, TimerArgumentType.TimerState.PAUSED_ONLY);
+        TimerArgumentType runningTimerArgumentType = new TimerArgumentType(plugin, TimerArgumentType.TimerState.RUNNING_ONLY);
 
 		LiteralCommandNode<CommandSourceStack> timerCommand = literal("timer")
                 .requires(ctx -> ctx.getSender().hasPermission(PERMISSION))
@@ -92,6 +94,12 @@ public final class TimerCommand {
                                               .executes(ctx -> onResetStyle(ctx, ctx.getArgument("timer", TimerRunnable.class)))
                                               .then(argument("style", new BossBarOverlayArgumentType())
                                                             .executes(ctx -> onSetStyle(ctx, ctx.getArgument("timer", TimerRunnable.class)))))))
+                .then(literal("resume")
+                              .then(argument("timer", pausedTimerArgumentType)
+                                      .executes(ctx -> onResume(ctx, ctx.getArgument("timer", TimerRunnable.class)))))
+                .then(literal("pause")
+                              .then(argument("timer", runningTimerArgumentType)
+                                      .executes(ctx -> onPause(ctx, ctx.getArgument("timer", TimerRunnable.class)))))
                 .then(literal("cancel")
                               .then(argument("timer", timerArgumentType)
                                       .executes(ctx -> onCancel(ctx, ctx.getArgument("timer", TimerRunnable.class)))))
@@ -159,6 +167,7 @@ public final class TimerCommand {
         BossBar.Color color = ctx.getArgument("color", BossBar.Color.class);
 
         timer.setColorOverride(color);
+        plugin.saveTimers();
         sender.sendMessage(Component.text("Timer color updated"));
 
         return Command.SINGLE_SUCCESS;
@@ -169,6 +178,7 @@ public final class TimerCommand {
         BossBar.Overlay style = ctx.getArgument("style", BossBar.Overlay.class);
 
         timer.setStyleOverride(style);
+        plugin.saveTimers();
         sender.sendMessage(Component.text("Timer style updated"));
 
         return Command.SINGLE_SUCCESS;
@@ -178,6 +188,7 @@ public final class TimerCommand {
         CommandSender sender = ctx.getSource().getSender();
 
         timer.resetColor();
+        plugin.saveTimers();
         sender.sendMessage(Component.text("Timer color reset"));
 
         return Command.SINGLE_SUCCESS;
@@ -192,13 +203,26 @@ public final class TimerCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int onCancel(CommandContext<CommandSourceStack> ctx, TimerRunnable timer) {
+    private int onPause(CommandContext<CommandSourceStack> ctx, TimerRunnable timer) {
         CommandSender sender = ctx.getSource().getSender();
 
-        if (!plugin.hasActiveTimers()) {
-            sender.sendMessage(Component.text("No timers are running").color(NamedTextColor.RED));
-            return Command.SINGLE_SUCCESS;
-        }
+        timer.pause();
+        plugin.saveTimers();
+        sender.sendMessage(Component.text("Timer paused"));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int onResume(CommandContext<CommandSourceStack> ctx, TimerRunnable timer) {
+        CommandSender sender = ctx.getSource().getSender();
+
+        timer.resume();
+        plugin.saveTimers();
+        sender.sendMessage(Component.text("Timer resumed"));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int onCancel(CommandContext<CommandSourceStack> ctx, TimerRunnable timer) {
+        CommandSender sender = ctx.getSource().getSender();
 
         timer.cancel();
         sender.sendMessage(Component.text("Timer cancelled"));
@@ -214,6 +238,7 @@ public final class TimerCommand {
         }
 
         plugin.getActiveTimers().values().forEach(TimerRunnable::cancel);
+        plugin.saveTimers();
         sender.sendMessage(Component.text("Cancelled all timers"));
         return Command.SINGLE_SUCCESS;
     }

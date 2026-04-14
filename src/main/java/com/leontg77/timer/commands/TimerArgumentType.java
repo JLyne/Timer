@@ -14,6 +14,7 @@ import net.kyori.adventure.bossbar.BossBar.Overlay;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -23,9 +24,16 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class TimerArgumentType implements CustomArgumentType.Converted<TimerRunnable, NamespacedKey> {
 	private final Main plugin;
+	private final TimerState state;
 
 	public TimerArgumentType(Main plugin) {
 		this.plugin = plugin;
+		this.state = TimerState.ANY;
+	}
+
+	public TimerArgumentType(Main plugin, TimerState state) {
+		this.plugin = plugin;
+		this.state = state;
 	}
 	
 	@Override
@@ -35,6 +43,31 @@ public final class TimerArgumentType implements CustomArgumentType.Converted<Tim
 		if(timer == null) {
 			throw new SimpleCommandExceptionType(new LiteralMessage("No timer exists with ID '" + input + "'"))
 					.create();
+		}
+
+		switch(state) {
+			case PAUSED_ONLY -> {
+				if (timer.isInfinite()) {
+					throw new SimpleCommandExceptionType(new LiteralMessage("Timer '" + timer.getId() + "' is infinite and cannot be resumed"))
+					.create();
+				}
+
+				if (!timer.isPaused()) {
+					throw new SimpleCommandExceptionType(new LiteralMessage("Timer '" + timer.getId() + "' is not paused"))
+					.create();
+				}
+			}
+			case RUNNING_ONLY -> {
+				if (timer.isInfinite()) {
+					throw new SimpleCommandExceptionType(new LiteralMessage("Timer '" + timer.getId() + "' is infinite and cannot be paused"))
+					.create();
+				}
+
+				if (timer.isPaused()) {
+					throw new SimpleCommandExceptionType(new LiteralMessage("Timer '" + timer.getId() + "' is already paused"))
+					.create();
+				}
+			}
 		}
 
 		return timer;
@@ -51,7 +84,15 @@ public final class TimerArgumentType implements CustomArgumentType.Converted<Tim
 		String search = builder.getRemainingLowerCase();
 
 		plugin.getActiveTimers()
-				.keySet().stream()
+				.entrySet().stream()
+				.filter(entry ->
+					switch (state) {
+						case PAUSED_ONLY -> !entry.getValue().isInfinite() && entry.getValue().isPaused();
+						case RUNNING_ONLY -> !entry.getValue().isInfinite() && !entry.getValue().isPaused();
+						default -> true;
+					}
+				)
+				.map(Map.Entry::getKey)
 				.filter(key -> key.namespace().startsWith(search)
 						|| key.value().startsWith(search)
 						|| key.toString().startsWith(search))
@@ -59,5 +100,11 @@ public final class TimerArgumentType implements CustomArgumentType.Converted<Tim
 				.forEach(builder::suggest);
 
 		return CompletableFuture.completedFuture(builder.build());
+	}
+
+	public enum TimerState {
+		ANY,
+		PAUSED_ONLY,
+		RUNNING_ONLY
 	}
 }
