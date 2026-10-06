@@ -75,14 +75,14 @@ public final class TimerCommand {
                               .then(argument("id", namespacedKey())
                                             .then(literal("duration")
                                                           .then(argument("duration", integer(1))
-                                                                        .then(argument("text", component())
+                                                                        .then(argument("message", component())
                                                                                       .executes(ctx -> onStart(ctx, TimerType.DURATION)))))
                                             .then(literal("endtime")
                                                           .then(argument("endtime", longArg())
-                                                                        .then(argument("text", component())
+                                                                        .then(argument("message", component())
                                                                                       .executes(ctx -> onStart(ctx, TimerType.END_TIME)))))
                                             .then(literal("infinite")
-                                                          .then(argument("text", component())
+                                                          .then(argument("message", component())
                                                                         .executes(ctx -> onStart(ctx, TimerType.INFINITE))))))
                 .then(literal("edit")
                         .then(argument("timer", timerArgumentType)
@@ -94,6 +94,10 @@ public final class TimerCommand {
                                               .executes(ctx -> onResetStyle(ctx, ctx.getArgument("timer", TimerRunnable.class)))
                                               .then(argument("style", new BossBarOverlayArgumentType())
                                                             .executes(ctx -> onSetStyle(ctx, ctx.getArgument("timer", TimerRunnable.class)))))))
+                                .then(literal("message")
+                                         .then(argument("message", component())
+                                                 .executes(ctx -> onSetMessage(ctx, ctx.getArgument("timer", TimerRunnable.class)))))
+                
                 .then(literal("resume")
                               .then(argument("timer", pausedTimerArgumentType)
                                       .executes(ctx -> onResume(ctx, ctx.getArgument("timer", TimerRunnable.class)))))
@@ -120,7 +124,7 @@ public final class TimerCommand {
         CommandSender sender = ctx.getSource().getSender();
 
         NamespacedKey id = ctx.getArgument("id", NamespacedKey.class);
-        Component text = ctx.getArgument("text", Component.class);
+        Component text = ctx.getArgument("message", Component.class);
 
         Instant endTime = null;
 
@@ -180,6 +184,17 @@ public final class TimerCommand {
         timer.setStyleOverride(style);
         plugin.saveTimers();
         sender.sendMessage(Component.text("Timer style updated"));
+
+        return Command.SINGLE_SUCCESS;
+    }
+    
+    private int onSetMessage(CommandContext<CommandSourceStack> ctx, TimerRunnable timer) {
+        CommandSender sender = ctx.getSource().getSender();
+        Component text = ctx.getArgument("message", Component.class);
+
+        timer.setMessage(text);
+        plugin.saveTimers();
+        sender.sendMessage(Component.text("Timer message updated"));
 
         return Command.SINGLE_SUCCESS;
     }

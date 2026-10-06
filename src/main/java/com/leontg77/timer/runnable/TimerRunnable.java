@@ -51,7 +51,7 @@ public final class TimerRunnable implements Runnable {
     private final Main plugin;
 
     private final NamespacedKey id;
-    private final Component message;
+    private Component message;
     private @Nullable Instant endTime;
     private @Nullable Instant pauseTime = null;
 
@@ -98,12 +98,7 @@ public final class TimerRunnable implements Runnable {
 
         if (remaining != newRemaining) {
             remaining = newRemaining;
-            handler.setText(
-                Component.text()
-                        .append(message)
-                        .append(Component.space())
-                        .append(Component.text(getFriendlyTime(remaining)))
-                        .build());
+            updateMessage();
             handler.updateProgress(remaining, total);
 
             if(remaining == 0) {
@@ -142,14 +137,7 @@ public final class TimerRunnable implements Runnable {
         }
 
         pauseTime = Instant.now();
-        handler.setText(
-                Component.text()
-                        .append(pausedPrefix)
-                        .append(Component.space())
-                        .append(message)
-                        .append(Component.space())
-                        .append(Component.text(getFriendlyTime(remaining)))
-                        .build());
+        updateMessage();
     }
 
     /**
@@ -171,12 +159,7 @@ public final class TimerRunnable implements Runnable {
         total += timeToAdd;
 
         pauseTime = null;
-        handler.setText(
-                Component.text()
-                        .append(message)
-                        .append(Component.space())
-                        .append(Component.text(getFriendlyTime(remaining)))
-                        .build());
+        updateMessage();
     }
 
     /**
@@ -200,6 +183,28 @@ public final class TimerRunnable implements Runnable {
     private static final long SECONDS_PER_DAY = 86400;
     private static final long SECONDS_PER_HOUR = 3600;
     private static final long SECONDS_PER_MINUTE = 60;
+    
+    private void updateMessage() {
+        if(isInfinite()) {
+            handler.setText(message);
+        } else if (isPaused()) {
+            handler.setText(
+                Component.text()
+                        .append(pausedPrefix)
+                        .append(Component.space())
+                        .append(message)
+                        .append(Component.space())
+                        .append(Component.text(getFriendlyTime(remaining)))
+                        .build());
+        } else {
+            handler.setText(
+                Component.text()
+                        .append(message)
+                        .append(Component.space())
+                        .append(Component.text(getFriendlyTime(remaining)))
+                        .build());
+        }
+    }
 
     /**
      * Converts the seconds into a string with hours, minutes and seconds.
@@ -318,6 +323,11 @@ public final class TimerRunnable implements Runnable {
         }
 
         return bossBarHandler.getStyleOverride();
+    }
+    
+    public void setMessage(Component message) {
+        this.message = message;
+        updateMessage();
     }
 
     public void setColorOverride(BossBar.Color color) {
